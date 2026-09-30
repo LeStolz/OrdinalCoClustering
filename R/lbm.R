@@ -11,52 +11,24 @@ lbm <- function(x,
                 K,
                 L,
                 model,
-				n_iterations = 100,
-				n_gibbs_iterations = 10,
-				eps = 1e-3) {
-
-  if (!is.matrix(x)) {
-    x <- as.matrix(x)
-  }
-
-  if (K < 1 || L < 1 || K > nrow(x) || L > ncol(x)) {
-    stop("Number of clusters must be positive and less than or equal to the number of rows/columns.")
-  }
-
-  if (!is.list(model)) {
-    stop("model must be a list.")
-  }
-
-  required_functions <- c(
-    "probability",
-    "log_probability",
-    "estimate_parameters",
-	"number_of_parameters"
-  )
-
-  missing_functions <- required_functions[
-    !required_functions %in% names(model)
-  ]
-
-  if (length(missing_functions) > 0) {
-    stop(
-      "Model is missing: ",
-      paste(missing_functions, collapse = ", ")
-    )
-  }
+                n_iterations = 100,
+                n_gibbs_iterations = 10,
+                eps = 1e-3,
+                burn_in = floor(n_iterations / 2)) {
 
   initial_lbm <- initialize_lbm(
-	x = x,
-	K = K,
-	L = L,
-	model = model
+    x = x,
+    K = K,
+    L = L,
+    model = model
   )
 
   sem_gibbs(
-	lbm = initial_lbm,
-	n_iterations = n_iterations,
-	n_gibbs_iterations = n_gibbs_iterations,
-	eps = eps
+    lbm = initial_lbm,
+    n_iterations = n_iterations,
+    n_gibbs_iterations = n_gibbs_iterations,
+    eps = eps,
+    burn_in = floor(n_iterations / 2)
   )
 }
 
@@ -80,14 +52,14 @@ initialize_lbm <- function(x,
   # Random initialization making sure every cluster has at least one observation
   repeat {
     z <- list(
-	  row = sample(seq_len(K$row), size = N$row, replace = TRUE),
-	  col = sample(seq_len(K$col), size = N$col, replace = TRUE)
-	)
+	    row = sample(seq_len(K$row), size = N$row, replace = TRUE),
+	    col = sample(seq_len(K$col), size = N$col, replace = TRUE)
+	  )
 
-  	p <- list(
-	  row = tabulate(z$row, nbins = K$row) / N$row,
-	  col = tabulate(z$col, nbins = K$col) / N$col
-	)
+    p <- list(
+	    row = tabulate(z$row, nbins = K$row) / N$row,
+	    col = tabulate(z$col, nbins = K$col) / N$col
+	  )
 
     if (all(p$row > 0) && all(p$col > 0)) {
       break
@@ -98,11 +70,12 @@ initialize_lbm <- function(x,
     list(
       x = x,
       N = N,
-	  K = K,
+	    K = K,
       z = z,
       p = p,
       block_parameters = NULL,
-      model = model
+      model = model,
+      icl = NULL
     ),
     class = "lbm"
   )
@@ -254,15 +227,15 @@ gibbs_sample_cluster <- function(lbm, dimension, hard_assignment = FALSE) {
       index = index,
     )
 
-	if (hard_assignment) {
-	  new_zi <- which.max(p_zi_ks__x_theta)
-	} else {
-      new_zi <- sample(
-        seq_len(K),
-        size = 1,
-        prob = p_zi_ks__x_theta
-      )
-	}
+    if (hard_assignment) {
+      new_zi <- which.max(p_zi_ks__x_theta)
+    } else {
+        new_zi <- sample(
+          seq_len(K),
+          size = 1,
+          prob = p_zi_ks__x_theta
+        )
+    }
 
     lbm$z[[dimension]][index] <- new_zi
   }
@@ -278,28 +251,29 @@ gibbs_sample_cluster <- function(lbm, dimension, hard_assignment = FALSE) {
 #' @param n_gibbs_iterations Number of Gibbs iterations in the E-S step.
 #' @param n_iterations Number of SEM iterations.
 #' @param eps Convergence threshold.
+#' @param burn_in Number of iterations to discard as burn-in.
 #'
 #' @noRd
-sem_gibbs <- function(lbm, n_iterations = 100, n_gibbs_iterations = 10, eps = 1e-3, burn_in = 40) {
+sem_gibbs <- function(lbm, n_iterations = 100, n_gibbs_iterations = 10, eps = 1e-3, burn_in = floor(n_iterations / 2)) {
   parameter_history <- vector("list", n_iterations)
   prev_log_likelihood <- -Inf
   n_iter_completed <- 0
 
   for (iteration in seq_len(n_iterations)) {
-	# SE
-	for (gibbs_iteration in seq_len(n_gibbs_iterations)) {
-	  lbm <- gibbs_sample_cluster(
-		lbm = lbm,
-		dimension = "row"
-	  )
+	  # SE
+	  for (gibbs_iteration in seq_len(n_gibbs_iterations)) {
+	    lbm <- gibbs_sample_cluster(
+		    lbm = lbm,
+		    dimension = "row"
+	    )
 
-	  lbm <- gibbs_sample_cluster(
-		lbm = lbm,
-		dimension = "col"
-	  )
-	}
+	    lbm <- gibbs_sample_cluster(
+		    lbm = lbm,
+		    dimension = "col"
+	    )
+	  }
 
-	# M
+	  # M
     lbm$p <- list(
       row = tabulate(lbm$z$row, nbins = lbm$K$row) / lbm$N$row,
       col = tabulate(lbm$z$col, nbins = lbm$K$col) / lbm$N$col
@@ -307,23 +281,26 @@ sem_gibbs <- function(lbm, n_iterations = 100, n_gibbs_iterations = 10, eps = 1e
 
     lbm$block_parameters <- estimate_block_parameters(lbm = lbm)
 
-	parameter_history[[iteration]] <- list(
-	  p = lbm$p,
-	  block_parameters = lbm$block_parameters
-	)
-	n_iter_completed <- n_iter_completed + 1
+	  parameter_history[[iteration]] <- list(
+	    p = lbm$p,
+	    block_parameters = lbm$block_parameters
+	  )
+	  n_iter_completed <- n_iter_completed + 1
 
-	cur_log_likelihood <- log_likelihood(lbm)
-	if (abs(cur_log_likelihood - prev_log_likelihood) < eps) {
-	  break
-	}
-	prev_log_likelihood <- cur_log_likelihood
+    cur_log_likelihood <- log_likelihood(lbm)
+    if (abs(cur_log_likelihood - prev_log_likelihood) < eps) {
+      break
+    }
+    prev_log_likelihood <- cur_log_likelihood
   }
 
   if (burn_in < n_iter_completed) {
-	parameter_history <- parameter_history[seq.int(burn_in + 1, n_iter_completed)]
-	lbm <- calculate_final_parameters(lbm, parameter_history, n_iterations)
+	  parameter_history <- parameter_history[seq.int(burn_in + 1, n_iter_completed)]
   }
+  else {
+    parameter_history <- parameter_history[seq.int(n_iter_completed, n_iter_completed)]
+  }
+  lbm <- calculate_final_parameters(lbm, parameter_history, n_iterations)
 
   lbm
 }
@@ -354,13 +331,13 @@ calculate_final_parameters <- function(lbm, parameter_history, n_iterations) {
   for (k in seq_len(K)) {
     for (l in seq_len(L)) {
       block_parameters[[k, l]] <- lapply(
-		names(first_block_parameters[[k, l]]),
-		function(name) {
-		  mean(vapply(
-			parameter_history, function(x) x$block_parameters[[k, l]][[name]], numeric(1)
-		  ))
-		}
-	  )
+		    names(first_block_parameters[[k, l]]),
+        function(name) {
+          mean(vapply(
+            parameter_history, function(x) x$block_parameters[[k, l]][[name]], numeric(1)
+          ))
+        }
+	    )
 
       names(block_parameters[[k, l]]) <- names(first_block_parameters[[k, l]])
     }
@@ -370,23 +347,25 @@ calculate_final_parameters <- function(lbm, parameter_history, n_iterations) {
   lbm$block_parameters <- block_parameters
 
   for (iteration in seq_len(n_iterations)) {
-	old_z <- lbm$z
+	  old_z <- lbm$z
 
-	lbm <- gibbs_sample_cluster(
-	  lbm = lbm,
-	  dimension = "row",
-	  hard_assignment = TRUE
-	)
-	lbm <- gibbs_sample_cluster(
-	  lbm = lbm,
-	  dimension = "col",
-	  hard_assignment = TRUE
-	)
+    lbm <- gibbs_sample_cluster(
+      lbm = lbm,
+      dimension = "row",
+      hard_assignment = TRUE
+    )
+    lbm <- gibbs_sample_cluster(
+      lbm = lbm,
+      dimension = "col",
+      hard_assignment = TRUE
+    )
 
-	if (identical(old_z, lbm$z)) {
-	  break
-	}
+    if (identical(old_z, lbm$z)) {
+      break
+    }
   }
+
+  lbm$icl <- icl(lbm)
 
   lbm
 }
