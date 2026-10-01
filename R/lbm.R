@@ -4,6 +4,10 @@
 #' @param K Number of row clusters.
 #' @param L Number of column clusters.
 #' @param model Observation model.
+#' @param n_iterations Number of iterations for the SEM-Gibbs algorithm.
+#' @param n_gibbs_iterations Number of Gibbs iterations for the SEM-Gibbs algorithm.
+#' @param eps Convergence threshold for the SEM-Gibbs algorithm.
+#' @param burn_in Number of burn-in iterations for the SEM-Gibbs algorithm.
 #'
 #' @return An object of class `lbm`.
 #' @export
