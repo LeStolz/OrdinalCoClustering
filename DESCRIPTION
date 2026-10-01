@@ -1,11 +1,15 @@
-Package: OrdinalCoClust
-Title: What the Package Does (One Line, Title Case)
+Package: CoCluster
+Title: Allows Co-clustering of Data Using the Latent Block Model with Native CUB Observation Model Support
 Version: 0.0.0.9000
-Authors@R: 
-    person("First", "Last", , "first.last@example.com", role = c("aut", "cre"))
+Authors@R:
+    person("Nam Dang", "VO", , "vonamdang03@gmail.com", role = c("aut", "cre"))
 Description: What the package does (one paragraph).
 License: `use_mit_license()`, `use_gpl3_license()` or friends to pick a
     license
 Config/roxygen2/version: 8.1.0
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
+Suggests: 
+    knitr,
+    rmarkdown
+VignetteBuilder: knitr

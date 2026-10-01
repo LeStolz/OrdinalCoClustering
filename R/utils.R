@@ -1,22 +1,22 @@
-#' Calculate the complete log-likelihood
+#' Calculate the complete log-likelihood of a model.
 #'
-#' @param x A `model` object.
+#' @param model A `model` object.
 #' @param ... Additional arguments.
 #'
 #' @return The complete log-likelihood.
 #' @export
-log_likelihood <- function(x, ...) {
+log_likelihood <- function(model, ...) {
   UseMethod("log_likelihood")
 }
 
 
-#' Calculate the ICL
+#' Calculate the ICL of a model.
 #'
-#' @param x A `model` object.
+#' @param model A `model` object.
 #' @param ... Additional arguments.
 #'
 #' @return The ICL value.
 #' @export
-icl <- function(x, ...) {
+icl <- function(model, ...) {
   UseMethod("icl")
 }
