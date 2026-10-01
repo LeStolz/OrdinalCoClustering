@@ -86,6 +86,8 @@ cocluster <- function(x,
   lbms <- c(fit_result$lbms)
   selected_lbm <- fit_result$selected_lbm
 
+  # https://inria.hal.science/hal-01658589/document
+  #
   if (choose_n_clusters) {
     repeat {
       prev_selected_lbm <- selected_lbm
