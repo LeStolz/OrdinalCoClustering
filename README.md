@@ -12,10 +12,6 @@ un oral au cours duquel je vous demanderai de m’expliquer certaines parties de
 # To test
 Gibbs, EM, CUB, SEM, LBM, Coclustering, ICL for selecting number of blocks, Random init, p$row, p$col, z$row, z$col, icl, block_parameters, best model.
 
-## Examples
-
-- [Young People Survey](https://www.kaggle.com/cardot/se-young-people-survey/data)
-
 ## References
 
 - ordinalClust package.

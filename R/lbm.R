@@ -45,12 +45,13 @@ lbm <- function(x,
 #' @param model Observation model.
 #'
 #' @return An object of class `lbm`.
+#' @noRd
 initialize_lbm <- function(x,
                            K,
                            L,
                            model) {
-  N <- c(row = nrow(x), col = ncol(x))
-  K <- c(row = K, col = L)
+  N <- list(row = nrow(x), col = ncol(x))
+  K <- list(row = K, col = L)
 
   # https://www.sciencedirect.com/science/article/pii/S0167947325000647
   # Random initialization making sure every cluster has at least one observation
@@ -185,35 +186,50 @@ icl.lbm <- function(lbm) {
 #' @noRd
 calculate_p_zi_ks__x_theta <- function(lbm, dimension, index) {
   K <- lbm$K[dimension]
-  p_zi_ks__x_theta <- numeric(K)
+  log_p_zi_ks <- numeric(K)
 
   for (k in seq_len(K)) {
-    p_zi_k__x_theta <- lbm$p[[dimension]][k]
+    if (lbm$p[[dimension]][k] == 0) {
+      log_p_zi_ks[k] <- -Inf
+      next
+    }
+
+    log_p <- log(lbm$p[[dimension]][k])
 
     if (dimension == "row") {
-      for (j in seq_len(lbm$N$col)) {
-        l <- lbm$z$col[j]
-        x <- lbm$x[index, j]
+      for (l in seq_len(lbm$K$col)) {
+        col_indices <- which(lbm$z$col == l)
+        if (length(col_indices) == 0) next
+
+        block <- lbm$x[index, col_indices, drop = FALSE]
         parameters <- lbm$block_parameters[[k, l]]
 
-        p_zi_k__x_theta <- p_zi_k__x_theta * lbm$model$probability(x, parameters)
+        log_p <- log_p + sum(lbm$model$log_probability(block, parameters))
       }
     } else if (dimension == "col") {
-      for (i in seq_len(lbm$N$row)) {
-        l <- lbm$z$row[i]
-        x <- lbm$x[i, index]
+      for (k in seq_len(lbm$K$row)) {
+        row_indices <- which(lbm$z$row == k)
+        if (length(row_indices) == 0) next
+
+        block <- lbm$x[row_indices, index, drop = FALSE]
         parameters <- lbm$block_parameters[[k, l]]
 
-        p_zi_k__x_theta <- p_zi_k__x_theta * lbm$model$probability(x, parameters)
+        log_p <- log_p + sum(lbm$model$log_probability(block, parameters))
       }
     } else {
       stop("dimension must be either 'row' or 'col'.")
     }
 
-    p_zi_ks__x_theta[k] <- p_zi_k__x_theta
+    log_p_zi_ks[k] <- log_p
   }
 
-  p_zi_ks__x_theta / sum(p_zi_ks__x_theta)
+  max_log_p <- max(log_p_zi_ks)
+  if (is.infinite(max_log_p)) {
+    return(rep(1 / K, K))
+  }
+
+  p_zi_ks <- exp(log_p_zi_ks - max_log_p)
+  p_zi_ks / sum(p_zi_ks)
 }
 
 
@@ -221,14 +237,14 @@ calculate_p_zi_ks__x_theta <- function(lbm, dimension, index) {
 #'
 #' @noRd
 gibbs_sample_cluster <- function(lbm, dimension, hard_assignment = FALSE) {
-  N <- lbm$N[dimension]
-  K <- lbm$K[dimension]
+  N <- lbm$N[[dimension]]
+  K <- lbm$K[[dimension]]
 
   for (index in seq_len(N)) {
     p_zi_ks__x_theta <- calculate_p_zi_ks__x_theta(
       lbm = lbm,
       dimension = dimension,
-      index = index,
+      index = index
     )
 
     if (hard_assignment) {
@@ -304,9 +320,8 @@ sem_gibbs <- function(lbm, n_iterations, n_gibbs_iterations, eps, burn_in) {
   else {
     parameter_history <- parameter_history[seq.int(n_iter_completed, n_iter_completed)]
   }
-  lbm <- calculate_final_parameters(lbm, parameter_history, n_iterations)
 
-  lbm
+  lbm <- calculate_final_parameters(lbm, parameter_history, n_iterations)
 }
 
 
@@ -314,6 +329,7 @@ sem_gibbs <- function(lbm, n_iterations, n_gibbs_iterations, eps, burn_in) {
 #'
 #' @param lbm An `lbm` object.
 #' @param parameter_history List of parameter estimates.
+#' @param n_iterations Number of iterations for the SEM-Gibbs algorithm.
 #'
 #' @return Averaged model parameters.
 #'
@@ -350,6 +366,7 @@ calculate_final_parameters <- function(lbm, parameter_history, n_iterations) {
   lbm$p <- p
   lbm$block_parameters <- block_parameters
 
+  # Calculate the final cluster assignments based on the averaged parameters after burn-in
   for (iteration in seq_len(n_iterations)) {
 	  old_z <- lbm$z
 
