@@ -5,8 +5,8 @@
 #'
 #' @param r Vector of responses between 1 and m.
 #' @param m Number of ordinal categories.
-#' @param pi_ Probability of a deliberate choice, in (0, 1).
-#' @param xi Feeling parameter, in (0, 1).
+#' @param pi_ Probability of a deliberate choice.
+#' @param xi Feeling parameter.
 #' @return A vector of probabilities, same length as `r`.
 #' @noRd
 cub_probability <- function(r, m, pi_, xi) {
@@ -20,12 +20,11 @@ cub_probability <- function(r, m, pi_, xi) {
 
 #' Log-probability of each cell of a block under the CUB model
 #'
-#' @param block Matrix (or vector) of responses between 1 and m.
+#' @param block Matrix of responses between 1 and m.
 #' @param m Number of ordinal categories.
 #' @param pi_ Probability of a deliberate choice.
 #' @param xi Feeling parameter.
-#' @return Same shape as `block`, with the log-probability of each response.
-#'   Missing responses (NA) give 0 so that they are ignored in a sum.
+#' @return A block of log-probabilities, same shape as `block`. Missing responses (NA) give 0 so that they are ignored in a sum.
 #' @noRd
 cub_log_probability <- function(block, m, pi_, xi) {
   # On travaille en log : un produit de nombreuses probabilités tombe à 0
@@ -38,8 +37,6 @@ cub_log_probability <- function(block, m, pi_, xi) {
   log_p
 }
 
-#' E-step of the EM algorithm for the CUB model
-#'
 #' Posterior probability that each response comes from the deliberate
 #' choice component rather than from the uniform component.
 #'
@@ -49,12 +46,11 @@ cub_log_probability <- function(block, m, pi_, xi) {
 #' @param xi Current value of xi.
 #' @return A vector tau with values in 0, 1, same length as `r`.
 #' @noRd
-cub_e_step <- function(r, m, pi_, xi) {
+e_zi__pi_xi <- function(r, m, pi_, xi) {
   # Règle de Bayes : tau_i = pi * b(r_i) / P(r_i)
   # = part du "choix réfléchi" dans la probabilité totale de la note r_i.
   # tau_i est l'espérance de la variable latente z_i (1 = choix réfléchi).
-  pi_ * dbinom(r - 1, size = m - 1, prob = 1 - xi) /
-    cub_probability(r, m, pi_, xi)
+  pi_ * dbinom(r - 1, size = m - 1, prob = 1 - xi) / cub_probability(r, m, pi_, xi)
 }
 
 #' M-step of the EM algorithm for the CUB model
@@ -82,34 +78,32 @@ cub_m_step <- function(r, tau, m) {
 
 #' EM algorithm for the CUB model on a vector of responses
 #'
-#' @param r Vector of responses between 1 and m (may contain NA).
+#' @param r Vector of responses between 1 and m.
 #' @param m Number of ordinal categories.
-#' @param max_iterations Maximum number of EM iterations.
-#' @param tolerance Convergence threshold on the change of the parameters.
+#' @param n_iterations Number of iterations for the EM algorithm.
+#' @param eps Convergence threshold for the EM algorithm.
 #' @param bound Keeps pi and xi inside bound, 1 - bound to avoid log(0).
 #' @return A named list `list(pi_ = , xi = )`.
 #' @noRd
-cub_em <- function(r, m, max_iterations = 200, tolerance = 1e-8,
+cub_em <- function(r, m, n_iterations = 200, eps = 1e-6,
                    bound = 1e-3) {
   r <- r[!is.na(r)]
 
-  # Bloc vide (cluster vide pendant le SEM) : paramètres neutres,
-  # sinon mean(tau) donnerait NaN.
   if (length(r) == 0) {
     return(list(pi_ = 0.5, xi = 0.5))
   }
 
-  # Initialisation neutre. L'EM converge vers un maximum local :
-  # le résultat peut dépendre de ce point de départ.
-  pi_ <- 0.5
-  xi <- 0.5
+  pi_ <- runif(1, 0.1, 0.9)
+  xi  <- runif(1, 0.1, 0.9)
 
-  for (iteration in seq_len(max_iterations)) {
-    tau <- cub_e_step(r, m, pi_, xi)          # étape E
-    updated <- cub_m_step(r, tau, m)          # étape M
+  for (iteration in seq_len(n_iterations)) {
+    # étape E
+    tau <- e_zi__pi_xi(r, m, pi_, xi)
+    # étape M
+    updated <- cub_m_step(r, tau, m)
 
     # On borne pi et xi dans [bound, 1 - bound] : évite log(0) = -Inf
-    # dans la log-vraisemblance (blocs presque constants).
+    # dans la log-vraisemblance.
     new_pi <- min(max(updated$pi_, bound), 1 - bound)
     new_xi <- min(max(updated$xi, bound), 1 - bound)
 
@@ -118,22 +112,20 @@ cub_em <- function(r, m, max_iterations = 200, tolerance = 1e-8,
     pi_ <- new_pi
     xi <- new_xi
 
-    if (change < tolerance) break
+    if (change < eps) break
   }
 
   list(pi_ = pi_, xi = xi)
 }
 
-#' Create a CUB observation model for the latent block model
+#' Create a CUB observation model
 #'
-#' Returns the list of functions expected by [cocluster()]:
-#' `probability`, `log_probability`, `estimate_parameters`
-#' and `number_of_parameters`.
+#' Returns the list of functions expected by [cocluster()].
 #'
 #' @param m Number of ordinal categories (responses are in 1, ..., m).
 #' @return A list defining the CUB model.
 #' @export
-make_cub_model <- function(m) {
+cub <- function(m) {
   # Fonction "usine" : m est mémorisé par les 3 fonctions ci-dessous
   # (fermeture), car un bloc peut ne pas contenir toutes les notes.
   list(
@@ -143,7 +135,6 @@ make_cub_model <- function(m) {
     log_probability = function(block, parameters) {
       cub_log_probability(block, m, parameters$pi_, parameters$xi)
     },
-    # Appelée par le SEM à chaque étape M, une fois par bloc.
     estimate_parameters = function(block) {
       cub_em(as.vector(block), m)
     },

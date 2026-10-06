@@ -1,0 +1,19 @@
+---
+title: "Coclustering simulated ordinal data"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Coclustering simulated ordinal data}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(CoCluster)
+```

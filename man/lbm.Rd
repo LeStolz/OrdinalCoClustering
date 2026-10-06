@@ -23,6 +23,14 @@ lbm(
 \item{L}{Number of column clusters.}
 
 \item{model}{Observation model.}
+
+\item{n_iterations}{Number of iterations for the SEM-Gibbs algorithm.}
+
+\item{n_gibbs_iterations}{Number of Gibbs iterations for the SEM-Gibbs algorithm.}
+
+\item{eps}{Convergence threshold for the SEM-Gibbs algorithm.}
+
+\item{burn_in}{Number of burn-in iterations for the SEM-Gibbs algorithm.}
 }
 \value{
 An object of class \code{lbm}.

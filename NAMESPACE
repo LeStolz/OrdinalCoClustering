@@ -3,7 +3,7 @@
 S3method(icl,lbm)
 S3method(log_likelihood,lbm)
 export(cocluster)
+export(cub)
 export(icl)
 export(lbm)
 export(log_likelihood)
-export(make_cub_model)

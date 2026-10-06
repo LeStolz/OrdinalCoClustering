@@ -1,0 +1,19 @@
+---
+title: "Coclustering quality-of-life questionnaire data"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Coclustering quality-of-life questionnaire data}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(CoCluster)
+```

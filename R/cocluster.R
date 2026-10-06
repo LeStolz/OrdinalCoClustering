@@ -1,6 +1,4 @@
-#' Co-clustering
-#'
-#' Fits a latent block model to data using any observation model
+#' Co-cluster data by fitting a latent block model using any observation model
 #' and SEM-Gibbs estimation.
 #'
 #' @param x Matrix of ordinal observations.
@@ -30,11 +28,11 @@
 cocluster <- function(x,
                       K,
                       L,
-                      model = cub_model,
+                      model = cub,
                       n_init = 20,
                       n_iterations = 100,
                       n_gibbs_iterations = 10,
-                      eps = 1e-3,
+                      eps = 1e-9,
                       burn_in = floor(n_iterations / 2),
                       choose_n_clusters = TRUE) {
 
@@ -86,6 +84,8 @@ cocluster <- function(x,
   lbms <- c(fit_result$lbms)
   selected_lbm <- fit_result$selected_lbm
 
+  # https://inria.hal.science/hal-01658589/document
+  #
   if (choose_n_clusters) {
     repeat {
       prev_selected_lbm <- selected_lbm

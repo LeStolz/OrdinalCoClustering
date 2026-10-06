@@ -4,6 +4,10 @@
 #' @param K Number of row clusters.
 #' @param L Number of column clusters.
 #' @param model Observation model.
+#' @param n_iterations Number of iterations for the SEM-Gibbs algorithm.
+#' @param n_gibbs_iterations Number of Gibbs iterations for the SEM-Gibbs algorithm.
+#' @param eps Convergence threshold for the SEM-Gibbs algorithm.
+#' @param burn_in Number of burn-in iterations for the SEM-Gibbs algorithm.
 #'
 #' @return An object of class `lbm`.
 #' @export
@@ -11,10 +15,10 @@ lbm <- function(x,
                 K,
                 L,
                 model,
-                n_iterations = 100,
-                n_gibbs_iterations = 10,
-                eps = 1e-3,
-                burn_in = floor(n_iterations / 2)) {
+                n_iterations,
+                n_gibbs_iterations,
+                eps,
+                burn_in) {
 
   initial_lbm <- initialize_lbm(
     x = x,
@@ -28,7 +32,7 @@ lbm <- function(x,
     n_iterations = n_iterations,
     n_gibbs_iterations = n_gibbs_iterations,
     eps = eps,
-    burn_in = floor(n_iterations / 2)
+    burn_in = burn_in
   )
 }
 
@@ -254,7 +258,7 @@ gibbs_sample_cluster <- function(lbm, dimension, hard_assignment = FALSE) {
 #' @param burn_in Number of iterations to discard as burn-in.
 #'
 #' @noRd
-sem_gibbs <- function(lbm, n_iterations = 100, n_gibbs_iterations = 10, eps = 1e-3, burn_in = floor(n_iterations / 2)) {
+sem_gibbs <- function(lbm, n_iterations, n_gibbs_iterations, eps, burn_in) {
   parameter_history <- vector("list", n_iterations)
   prev_log_likelihood <- -Inf
   n_iter_completed <- 0
