@@ -8,8 +8,4 @@ This package leverages the **Latent Block Model (LBM)** equipped natively with t
 
 ## To dos
 
-un package R (en format .tar.gz installer sur Mac),
-une vignette
-
-# To test
-p$row, p$col, z$row, z$col, block_parameters.
+un package R (en format .tar.gz installer sur Mac)

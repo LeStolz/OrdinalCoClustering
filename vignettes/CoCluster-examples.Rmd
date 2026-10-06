@@ -86,21 +86,27 @@ result_sim <- cocluster(
 
 ### Interpretation of Results
 
-Once the model is fitted, the `cocluster` object contains the best model selected by ICL under `$selected_lbm`.
-
-**Model Selection:**
+**Model Selection:** Once the model is fitted, the `cocluster` object contains the best model selected by ICL under `$selected_lbm`.
 
 ```{r}
 best_sim <- result_sim$selected_lbm
 print(c(K_optimal = best_sim$K$row, L_optimal = best_sim$K$col))
 ```
 
-This tells us the optimal number of clusters discovered by the ICL greedy search.
-
-**Extracting Clusters:** To obtain the hard cluster assignments for each row and column, you can inspect \`$z$:
+This tells us the optimal number of clusters discovered by the ICL greedy search. We can also inspect the ICL values of all the models evaluated during the search:
 
 ```{r}
-table(best_sim$z$col) # The size of each column cluster
+data.frame(
+  K = sapply(result_sim$lbms, function(m) m$K$row),
+  L = sapply(result_sim$lbms, function(m) m$K$col),
+  ICL = sapply(result_sim$lbms, function(m) round(m$icl, 2))
+)
+```
+
+**Extracting Clusters:** To obtain the hard cluster assignments for each row and column, you can inspect $z$:
+
+```{r}
+table(best_sim$z$col)
 ```
 
 **Cluster Proportions:** You can retrieve the estimated mixing proportions for the rows and columns:
@@ -110,16 +116,25 @@ print(best_sim$p$row)
 print(best_sim$p$col)
 ```
 
-These vectors represent the estimated global proportions of the clusters. For example, the values in `p$row` indicate the expected fraction of the total rows belonging to each row cluster.
+These vectors represent the estimated prior proportions of the clusters. For example, the values in `p$row` indicate the expected fraction of the total rows belonging to each row cluster.
 
 **Visualization:** We can visually verify the clustering structure by sorting the matrix by the predicted row and column clusters:
 
 ```{r, fig.width=5, fig.height=5}
 sorted_x_sim <- x_sim[order(best_sim$z$row), order(best_sim$z$col)]
-image(t(sorted_x_sim)[, nrow(sorted_x_sim):1],
-      col = heat.colors(m_sim),
-      axes = FALSE,
+image(x = 1:ncol(sorted_x_sim), y = 1:nrow(sorted_x_sim),
+      z = t(sorted_x_sim)[, nrow(sorted_x_sim):1],
+      col = heat.colors(m_sim), axes = FALSE,
+      xlab = "Column Clusters", ylab = "Row Clusters",
       main = "Simulated Co-clustered Data Matrix")
+
+# Label the clusters exactly at their centers
+axis(1, at = tapply(1:ncol(sorted_x_sim), sort(best_sim$z$col), mean), labels = paste("Cluster", 1:best_sim$K$col))
+axis(2, at = tapply(nrow(sorted_x_sim):1, sort(best_sim$z$row), mean), labels = paste("Cluster", 1:best_sim$K$row))
+
+# Draw cluster boundaries
+abline(v = cumsum(table(best_sim$z$col)) + 0.5, lwd = 2)
+abline(h = nrow(sorted_x_sim) - cumsum(table(best_sim$z$row)) + 0.5, lwd = 2)
 box()
 ```
 
@@ -129,7 +144,7 @@ For a more advanced use case, we will co-cluster a real-world dataset and explor
 
 ### Description of the Dataset
 
-We use the `dataqol` dataset from the `ordinalClust` package. It consists of a quality-of-life questionnaire containing 117 patients (rows) and 30 questions (columns).
+We use the `dataqol` dataset from the `ordinalClust` package. It consists of a quality-of-life questionnaire containing patients (rows) and 30 questions (columns).
 
 The CUB observation model we are using requires that all ordinal variables share the exact same number of categories $m$. In the `dataqol` dataset, questions 1 through 28 have 4 categories, while questions 29 and 30 have 7 categories. Therefore, we must restrict our dataset to `q1` through `q28` and set $m=4$. We also drop the patient ID column.
 
@@ -141,14 +156,12 @@ m_qol <- 4
 table(x_qol, useNA = "ifany")
 ```
 
-*Note on Limitations:* Any missing responses (`NA`) are naturally handled and ignored during the likelihood calculation. Additionally, note that each patient appears three times in this specific dataset because the `Id` variable is repeated (repeated measures). The Latent Block Model inherently assumes independent rows, which is a theoretical limitation in this specific example but serves well for demonstration.
-
 ### Advanced Model Fitting
 
-We can finely tune the SEM-Gibbs algorithm using several optional parameters: - `n_init`: The number of random initializations to avoid local maxima. - `n_iterations`: Total number of SEM iterations. - `n_gibbs_iterations`: The number of Gibbs sampling passes inside the E-step. - `eps`: Convergence threshold for the log-likelihood (default `1e-9`). - `burn_in`: The number of iterations to discard before averaging the parameter estimates (default is half of `n_iterations`).
+We can finely tune the SEM-Gibbs algorithm using several optional parameters: `n_init`: The number of random initializations to avoid local maxima, `n_iterations`: Total number of SEM iterations, `n_gibbs_iterations`: The number of Gibbs sampling passes inside the E-step, `eps`: Convergence threshold for the log-likelihood, `burn_in`: The number of iterations to discard before averaging the parameter estimates, etc, see `?cocluster`.
 
 ```{r, results="hide"}
-# set.seed(1)
+set.seed(1)
 result_qol <- cocluster(
   x = x_qol,
   K = 3, L = 3,
@@ -158,9 +171,30 @@ result_qol <- cocluster(
   n_gibbs_iterations = 4,
   eps = 1e-6,
   burn_in = 40,
-  choose_n_clusters = FALSE # Fixed K and L for speed in this vignette
+  choose_n_clusters = FALSE
 )
 best_qol <- result_qol$selected_lbm
+```
+
+### Model Selection
+
+Since we disabled the greedy search (`choose_n_clusters = FALSE`) for execution speed in this vignette, the algorithm directly returns the model for our specified $K=3$ and $L=3$.
+
+```{r}
+print(c(K = best_qol$K$row, L = best_qol$K$col, ICL = round(best_qol$icl, 2)))
+```
+
+### Extracting Clusters and Proportions
+
+We can extract the estimated hard cluster assignments and their prior proportions:
+
+```{r}
+# Sizes of the estimated column clusters
+table(best_qol$z$col)
+
+# Estimated prior proportions of the row and column clusters
+print(best_qol$p$row)
+print(best_qol$p$col)
 ```
 
 ### Interpreting Block Parameters
@@ -177,57 +211,68 @@ data.frame(
 )
 ```
 
-**How to interpret:** A block with a low `xi` contains mostly high ratings, while a block with a high `xi` contains mostly low ratings. In `dataqol`, a lower rating generally indicates fewer difficulties (you can verify this via `?ordinalClust::dataqol`). Therefore, a block with high `xi` corresponds to a cluster of patients who experience minimal discomfort for that specific cluster of questions.
+**How to interpret:** A block with a low `xi` contains mostly high ratings, while a block with a high `xi` contains mostly low ratings. Additionally, a `pi` near 1 indicates that the responses in that block are deliberate and consistent, whereas a lower `pi` suggests more randomness and uncertainty in the ratings.
 
 ### Visualization
 
-To visualize the clusters, you can sort your data matrix by the estimated row and column assignments and plot it using base R's `image()` function:
+To visualize the clusters, you can sort your data matrix by the estimated row and column assignments and plot it:
 
 ```{r, fig.width=5, fig.height=5}
 # Sort data by cluster assignments
 sorted_x <- x_qol[order(best_qol$z$row), order(best_qol$z$col)]
 
 # Visualize the clustered blocks
-image(t(sorted_x)[, nrow(sorted_x):1],
-      col = heat.colors(m_qol),
-      axes = FALSE,
+image(x = 1:ncol(sorted_x), y = 1:nrow(sorted_x),
+      z = t(sorted_x)[, nrow(sorted_x):1],
+      col = heat.colors(m_qol), axes = FALSE,
+      xlab = "Question Clusters", ylab = "Patient Clusters",
       main = "Co-clustered Data Matrix")
+
+# Label the clusters exactly at their centers
+axis(1, at = tapply(1:ncol(sorted_x), sort(best_qol$z$col), mean), labels = paste("Cluster", 1:best_qol$K$col))
+axis(2, at = tapply(nrow(sorted_x):1, sort(best_qol$z$row), mean), labels = paste("Cluster", 1:best_qol$K$row))
+
+# Draw cluster boundaries
+abline(v = cumsum(table(best_qol$z$col)) + 0.5, lwd = 2)
+abline(h = nrow(sorted_x) - cumsum(table(best_qol$z$row)) + 0.5, lwd = 2)
 box()
 ```
 
-*Darker/lighter regions represent the homogeneous blocks discovered by the algorithm.*
+### Grid Search Model Selection
 
-### Manual Model Selection (Grid Search)
+If you prefer to perform an exhaustive grid search instead of using the local greedy search (`choose_n_clusters = TRUE`), you can simply pass a vector of values to the `K` and `L` arguments in `cocluster()`. The function will evaluate every combination and return the best overall model.
 
-If you prefer not to use `choose_n_clusters = TRUE`, you can manually evaluate the ICL criterion for multiple combinations of $(K, L)$ by looping over the core `lbm()` function. The largest (least negative) ICL value indicates the best model.
+```{r grid_search, eval = FALSE}
+result_grid <- cocluster(
+  x = x_qol,
+  K = 2:4, # Test K from 2 to 4
+  L = 2:4, # Test L from 2 to 4
+  model = cub(m_qol),
+  n_init = 3,
+  n_iterations = 10,
+  n_gibbs_iterations = 2,
+  eps = 1e-6,
+  burn_in = 5
+)
 
-```{r icl, eval = FALSE}
-icl_table <- matrix(NA, 3, 3,
-  dimnames = list(paste0("K=", 2:4), paste0("L=", 2:4)))
-
-for (K in 2:4) {
-  for (L in 2:4) {
-    fits <- lapply(1:3, function(i) {
-      lbm(x_qol, K, L, cub(m_qol), n_iterations = 10, n_gibbs_iterations = 2,
-          eps = 1e-6, burn_in = 5)
-    })
-    icl_table[K - 1, L - 1] <- max(sapply(fits, function(f) f$icl))
-  }
-}
-icl_table
+# View the ICL of all models tested in the 3x3 grid
+data.frame(
+  K = sapply(result_grid$lbms, function(m) m$K$row),
+  L = sapply(result_grid$lbms, function(m) m$K$col),
+  ICL = sapply(result_grid$lbms, function(m) round(m$icl, 2))
+)
 ```
 
 *(This code block is not evaluated here as an exhaustive grid search takes a couple of minutes to run.)*
 
-## 5. Extending the Package: Using Different Observation Models
+## 5. Using Different Observation Models
 
-The package is designed to be extensible. You are not strictly limited to the CUB model. The `model` argument in `cocluster()` accepts any list of functions defining an observation model. To implement your own model (e.g., a Poisson or Gaussian block model), you simply need to provide a list containing: 1. `probability(x, parameters)`: Computes the probability of a single observation. 2. `log_probability(block, parameters)`: Computes the log-probability of an entire matrix block. 3. `estimate_parameters(block)`: Returns a list of estimated parameters for a given block matrix. 4. `number_of_parameters`: An integer used to compute the ICL penalty.
+The package is designed to be extensible. You are not strictly limited to the CUB model. The `model` argument in `cocluster()` accepts any list of functions defining an observation model. To implement your own model (e.g., a Poisson or Gaussian block model), you simply need to provide a list containing: 1. `probability(...)`: Computes the probability of a single observation. 2. `log_probability(...)`: Computes the log-probability of an entire matrix block. 3. `estimate_parameters(...)`: Returns a list of estimated parameters for a given block matrix. 4. `number_of_parameters`: An integer used to compute the ICL penalty. For more information, see `?cocluster`.
 
-## 6. Comparison with Literature and References
+## 6. References
 
-Jacques and Biernacki (2018) performed a co-clustering of this exact `dataqol` ordinal dataset using the BOS model (Section 5 of their paper). The number of blocks and the groupings of the questions can be compared directly with our results, keeping in mind that the underlying assumptions of the CUB and BOS models differ.
+<https://inria.hal.science/hal-01658589/document>
 
-- Piccolo, D. (2003). On the moments of a mixture of uniform and shifted binomial random variables. *Quaderni di Statistica*, 5, 85-104.
-- Govaert, G., & Nadif, M. (2008). Block clustering with Bernoulli mixture models: Comparison of different approaches. *Computational Statistics & Data Analysis*, 52(6), 3233-3245.
-- Keribin, C., Brault, V., Celeux, G., & Govaert, G. (2012). Estimation and selection for the latent block model on categorical data. *Statistics and Computing*, 25(6), 1201-1216.
-- Jacques, J., & Biernacki, C. (2018). Model-based co-clustering for ordinal data. *Computational Statistics & Data Analysis*, 123, 101-115.
+<https://inria.hal.science/inria-00494796/document>
+
+Jacques and Biernacki (2018) performed a co-clustering of this exact `dataqol` ordinal dataset using the BOS model. The number of blocks and the groupings of the questions can be compared directly with our results, keeping in mind that the underlying assumptions of the CUB and BOS models differ.

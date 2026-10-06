@@ -2,8 +2,8 @@
 #' SEM-Gibbs estimation and model selection using ICL.
 #'
 #' @param x Matrix of observations.
-#' @param K Initial number of row clusters.
-#' @param L Initial number of column clusters.
+#' @param K Initial number of row clusters. If a vector is provided, a grid search is performed.
+#' @param L Initial number of column clusters. If a vector is provided, a grid search is performed.
 #' @param model Observation model as a list of functions defining the probability distribution of a block containing:
 #' \describe{
 #'   \item{probability}{Function to compute the probability of given responses under the obseration model.}
@@ -66,11 +66,11 @@ cocluster <- function(x,
     x <- as.matrix(x)
   }
 
-  if (K < 1 || K > nrow(x)) {
+  if (any(K < 1) || any(K > nrow(x))) {
     stop("K must be between 1 and the number of rows.")
   }
 
-  if (L < 1 || L > ncol(x)) {
+  if (any(L < 1) || any(L > ncol(x))) {
     stop("L must be between 1 and the number of columns.")
   }
 
@@ -96,47 +96,77 @@ cocluster <- function(x,
     )
   }
 
-  fit_result <- fit_models(
-    x = x,
-    K = K,
-    L = L,
-    model = model,
-    n_init = n_init,
-    n_iterations = n_iterations,
-    n_gibbs_iterations = n_gibbs_iterations,
-    eps = eps,
-    burn_in = burn_in
-  )
-  lbms <- c(fit_result$lbms)
-  selected_lbm <- fit_result$selected_lbm
+  if (length(K) > 1 || length(L) > 1) {
+    if (choose_n_clusters) {
+      warning("choose_n_clusters is ignored when multiple values are provided for K or L (grid search is performed instead).")
+    }
 
-  if (choose_n_clusters) {
-    repeat {
-      prev_selected_lbm <- selected_lbm
-      neighbors <- get_neighbors(prev_selected_lbm$K$row, prev_selected_lbm$K$col, nrow(x), ncol(x))
+    grid <- expand.grid(K = K, L = L)
+    lbms <- list()
+    selected_lbm <- NULL
 
-      for (neighbor in neighbors) {
-        fit_result <- fit_models(
-          x = x,
-          K = neighbor[1],
-          L = neighbor[2],
-          model = model,
-          n_init = n_init,
-          n_iterations = n_iterations,
-          n_gibbs_iterations = n_gibbs_iterations,
-          eps = eps,
-          burn_in = burn_in
-        )
+    for (i in seq_len(nrow(grid))) {
+      fit_result <- fit_models(
+        x = x,
+        K = grid$K[i],
+        L = grid$L[i],
+        model = model,
+        n_init = n_init,
+        n_iterations = n_iterations,
+        n_gibbs_iterations = n_gibbs_iterations,
+        eps = eps,
+        burn_in = burn_in
+      )
 
-        lbms <- c(lbms, fit_result$lbms)
+      lbms <- c(lbms, fit_result$lbms)
 
-        if (is.null(selected_lbm) || fit_result$selected_lbm$icl > selected_lbm$icl) {
-          selected_lbm <- fit_result$selected_lbm
-        }
+      if (is.null(selected_lbm) || fit_result$selected_lbm$icl > selected_lbm$icl) {
+        selected_lbm <- fit_result$selected_lbm
       }
+    }
+  } else {
+    fit_result <- fit_models(
+      x = x,
+      K = K,
+      L = L,
+      model = model,
+      n_init = n_init,
+      n_iterations = n_iterations,
+      n_gibbs_iterations = n_gibbs_iterations,
+      eps = eps,
+      burn_in = burn_in
+    )
+    lbms <- c(fit_result$lbms)
+    selected_lbm <- fit_result$selected_lbm
 
-      if (identical(selected_lbm, prev_selected_lbm)) {
-        break
+    if (choose_n_clusters) {
+      repeat {
+        prev_selected_lbm <- selected_lbm
+        neighbors <- get_neighbors(prev_selected_lbm$K$row, prev_selected_lbm$K$col, nrow(x), ncol(x))
+
+        for (neighbor in neighbors) {
+          fit_result <- fit_models(
+            x = x,
+            K = neighbor[1],
+            L = neighbor[2],
+            model = model,
+            n_init = n_init,
+            n_iterations = n_iterations,
+            n_gibbs_iterations = n_gibbs_iterations,
+            eps = eps,
+            burn_in = burn_in
+          )
+
+          lbms <- c(lbms, fit_result$lbms)
+
+          if (is.null(selected_lbm) || fit_result$selected_lbm$icl > selected_lbm$icl) {
+            selected_lbm <- fit_result$selected_lbm
+          }
+        }
+
+        if (identical(selected_lbm, prev_selected_lbm)) {
+          break
+        }
       }
     }
   }
