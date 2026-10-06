@@ -8,9 +8,8 @@ This package leverages the **Latent Block Model (LBM)** equipped natively with t
 
 ## To dos
 
-un package R (en format .tar.gz installer sur Mac) avec la function avec une aide pour elle, incluant un exemple d’utilisation,
-une vignette pour votre package R illustrant l’utilisation de votre package,
-un oral au cours duquel je vous demanderai de m’expliquer certaines parties de votre code.
+un package R (en format .tar.gz installer sur Mac),
+une vignette
 
 # To test
-example, Gibbs, EM, CUB, SEM, LBM, Coclustering, ICL for selecting number of blocks, Random init, p$row, p$col, z$row, z$col, icl, block_parameters, best model.
+p$row, p$col, z$row, z$col, block_parameters.

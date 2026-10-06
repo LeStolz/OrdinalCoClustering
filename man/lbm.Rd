@@ -37,8 +37,7 @@ An object of class \code{lbm} containing:
 \item{K}{A list containing the number of row clusters (\code{row}) and column clusters (\code{col}).}
 \item{z}{A list containing the row-cluster (\code{row}) and column-cluster (\code{col}) assignments.}
 \item{p}{A list containing the prior probabilities of row-cluster (\code{row}) and column-cluster (\code{col}) membership.}
-\item{block_parameters}
-{A matrix of the estimated observation model parameters for each block, indexed by \verb{[[row_cluster, col_cluster]]}.}
+\item{block_parameters}{A matrix of the estimated observation model parameters for each block, indexed by \verb{[[row_cluster, col_cluster]]}.}
 \item{model}{The observation model used.}
 \item{icl}{The Integrated Completed Likelihood (ICL) value of the model.}
 }

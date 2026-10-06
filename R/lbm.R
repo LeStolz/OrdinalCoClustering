@@ -22,8 +22,7 @@
 #'   \item{K}{A list containing the number of row clusters (`row`) and column clusters (`col`).}
 #'   \item{z}{A list containing the row-cluster (`row`) and column-cluster (`col`) assignments.}
 #'   \item{p}{A list containing the prior probabilities of row-cluster (`row`) and column-cluster (`col`) membership.}
-#'   \item{block_parameters}
-#'     {A matrix of the estimated observation model parameters for each block, indexed by `[[row_cluster, col_cluster]]`.}
+#'   \item{block_parameters}{A matrix of the estimated observation model parameters for each block, indexed by `[[row_cluster, col_cluster]]`.}
 #'   \item{model}{The observation model used.}
 #'   \item{icl}{The Integrated Completed Likelihood (ICL) value of the model.}
 #' }

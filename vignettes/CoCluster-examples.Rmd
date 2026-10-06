@@ -14,23 +14,40 @@ knitr::opts_chunk$set(
 )
 ```
 
-## 1. Introduction and Motivation
+## 1. Introduction
 
-**What problem does the package solve?** The `CoCluster` package allows for the simultaneous clustering (co-clustering or bi-clustering) of ordinal data matrices. Specifically, it groups rows (e.g., individuals, patients) and columns (e.g., questions, features) at the same time to discover homogeneous blocks of data.
+Standard clustering only groups rows while co-clustering group both rows and columns simultaneously, reducing the dataset into a concise summary of "types of observations" and "types of features" within homogeneous blocks of data highlighting the interactions between them.
 
-**Why is this problem interesting?** In many domains like psychometrics or quality-of-life surveys, data is ordinal (e.g., Likert scales from 1 to 5). Standard clustering only groups rows. Co-clustering reduces the dataset into a concise summary of "types of patients" and "types of questions", highlighting the underlying interactions between them.
+The `CoCluster` package allows for the co-clustering of an $N \times D$ data matrix $\mathbf{x}$. Specifically, it groups rows and columns at the same time into $K$ and $L$ row and column clusters with prior probability $\alpha_k$ and $\beta_l$ respectively.
 
-**Methodology and Mathematical Description** The package implements the **Latent Block Model (LBM)**. Suppose we have an $N \times D$ data matrix $\mathbf{X}$. The LBM assumes there exists an underlying partition of rows into $K$ clusters and columns into $L$ clusters. For a row $i$ in cluster $k$ and column $j$ in cluster $l$, the observation $x_{ij}$ is drawn from a probability distribution specific to the block $(k, l)$.
+The package implements the **Latent Block Model (LBM)**, which assumes:
 
-This package natively equips the LBM with the **CUB (Combination of Uniform and shifted Binomial)** observation model for ordinal data. An ordinal response $R \in \{1, \dots, m\}$ is modeled as a mixture of a deliberate choice (shifted binomial, parameterized by a feeling parameter $\xi$) and a random choice (discrete uniform distribution, representing uncertainty), governed by a mixing weight $\pi$:
+- there exists an underlying partition of rows into $K$ clusters (where $\mathbf{v}_{ik}=1$ if row $i$ is in cluster $k$) and columns into $L$ clusters (where $\mathbf{w}_{jl}=1$ if column $j$ is in cluster $l$).
 
-$$P(x_{ij} = r \mid z_i=k, w_j=l) = \pi_{kl} \binom{m-1}{r-1} (1-\xi_{kl})^{r-1} \xi_{kl}^{m-r} + \frac{1-\pi_{kl}}{m}$$
+- conditional on the row and column assignments ($v$ and $w$), the observations $\mathbf{x}_{ij}$ are independent and drawn from a probability distribution $P(.;\pi_{kl})$ specific to the block $(v_{ik}=1, w_{jl}=1)$. The fundamental joint probability of the data is given by:
+
+$$
+P(\mathbf{x}|\theta) = \sum_{v \in V} \sum_{w \in W} \prod_{ik} \alpha_{k}^{v_{ik}} \prod_{jl} \beta_{l}^{w_{jl}} \prod_{ijkl} P(\mathbf{x}_{ij}; \pi_{kl})^{v_{ik}w_{jl}}
+$$
+
+Due to the log likelihood being not tractable because of the sums, the **Stochastic Expectation Maximization (SEM)** algorithm is used which repeats the 2 steps:
+
+- SE step: use the **Gibbs Sampler** to alternatively sample $v|\mathbf{x},w,\theta$ and $v|\mathbf{x},w,\theta$ from their distributions.
+- M step: Maximize expected complete log-likelihood: $\theta=\arg \max_{\theta} E(\mathcal{L}_c(\mathbf{x}, v, w,\theta)|\mathbf{x},\theta)$ which can be done using the **Expectation Maximization (EM)** algorithm to estimate the block parameters.
+
+After a burn-in period, $\hat{v}, \hat{w}$ can be obtained by sampling using $\hat{\theta}$ and can used for clustering.
+
+In many domains like psychometrics or surveys, data is ordinal (e.g., Likert scales from 1 to 5). This package natively equips the LBM with the **CUB (Combination of Uniform and shifted Binomial)** observation model for ordinal data. An ordinal response $R \in \{1, \dots, m\}$ is modeled as a mixture of a deliberate choice (shifted binomial, parameterized by a feeling parameter $\xi$) and a random choice (discrete uniform distribution, representing uncertainty), governed by a mixing weight $\pi$:
+
+$$P(\mathbf{x}_{ij} = r \mid v_{ik}=1, w_{jl}=1) = \pi_{kl} \binom{m-1}{r-1} (1-\xi_{kl})^{r-1} \xi_{kl}^{m-r} + \frac{1-\pi_{kl}}{m}$$
 
 A value of $\xi_{kl}$ close to 0 corresponds to a tendency for higher ordinal ratings in that block, while $\pi_{kl}$ near 1 means less random guessing.
 
-**Algorithm Details** Parameters are estimated via the **SEM-Gibbs (Stochastic Expectation-Maximization with Gibbs sampling)** algorithm. Because the true posterior distribution of the LBM is intractable, SEM-Gibbs alternates between sampling row and column assignments (Stochastic E-step via Gibbs sampling) and maximizing the block parameters using standard EM for the CUB model (M-step).
+**Selecting K and L** The optimal number of row clusters ($K$) and column clusters ($L$) is selected using the **Integrated Completed Likelihood (ICL)** criterion, which penalizes the log-likelihood for model complexity (number of parameters):
 
-**Selecting K and L** The optimal number of row clusters ($K$) and column clusters ($L$) is selected using the **Integrated Completed Likelihood (ICL)** criterion. The ICL penalizes the log-likelihood for model complexity (number of parameters) and entropy (uncertainty in cluster assignments): $$ \text{ICL} = \log L(\mathbf{X}, \mathbf{z}, \mathbf{w} \mid \hat{\theta}) - \frac{K-1}{2}\log N - \frac{L-1}{2}\log D - \frac{KLv}{2}\log(ND) $$ where $v$ is the number of parameters per block (2 for the CUB model).
+$$\text{ICL} = \mathcal{L}_c(\mathbf{x}, v, w,\theta) - \frac{K-1}{2}\log N - \frac{L-1}{2}\log D - \frac{KLv}{2}\log(ND) $$
+
+where $v$ is the number of parameters per block (2 for the CUB model).
 
 ## 2. Installation and Setup
 
@@ -45,24 +62,23 @@ library(CoCluster)
 For a simple use case, we demonstrate how to use the package on a generic dataset. We will use the `Msimulated` dataset provided by the `ordinalClust` package.
 
 ```{r}
-# Load the simulated data
 data(Msimulated, package = "ordinalClust")
 x_sim <- as.matrix(Msimulated)
-m_sim <- max(x_sim, na.rm = TRUE) # Automatically detect the number of ordinal categories
+m_sim <- max(x_sim, na.rm = TRUE) # Detect the number of ordinal categories
 ```
 
 ### Fitting the Model
 
-The main function of the package is `cocluster()`. We fit an LBM on the simulated data, enabling `choose_n_clusters = TRUE` so the algorithm automatically searches the neighborhood of our starting $K$ and $L$ to greedily find the optimal dimensions based on ICL.
+The main function of the package is `cocluster()`. We fit an LBM with the CUB observation model on the simulated data, enabling `choose_n_clusters = TRUE` so the algorithm automatically searches the neighborhood of our starting $K$ and $L$ to greedily find the optimal dimensions based on ICL.
 
 ```{r, results="hide"}
 result_sim <- cocluster(
   x = x_sim,
-  K = 2,              # Starting number of row clusters
-  L = 2,              # Starting number of column clusters
-  model = cub(m_sim), # Provide the CUB observation model factory
-  n_init = 3,         # Number of random initializations
-  n_iterations = 50,
+  K = 3,              
+  L = 3,              
+  model = cub(m_sim),
+  n_init = 4,
+  n_iterations = 40,
   n_gibbs_iterations = 2,
   choose_n_clusters = TRUE
 )
@@ -98,7 +114,7 @@ These vectors represent the estimated global proportions of the clusters. For ex
 
 **Visualization:** We can visually verify the clustering structure by sorting the matrix by the predicted row and column clusters:
 
-```{r, fig.width=6, fig.height=4}
+```{r, fig.width=5, fig.height=5}
 sorted_x_sim <- x_sim[order(best_sim$z$row), order(best_sim$z$col)]
 image(t(sorted_x_sim)[, nrow(sorted_x_sim):1],
       col = heat.colors(m_sim),
@@ -132,16 +148,16 @@ table(x_qol, useNA = "ifany")
 We can finely tune the SEM-Gibbs algorithm using several optional parameters: - `n_init`: The number of random initializations to avoid local maxima. - `n_iterations`: Total number of SEM iterations. - `n_gibbs_iterations`: The number of Gibbs sampling passes inside the E-step. - `eps`: Convergence threshold for the log-likelihood (default `1e-9`). - `burn_in`: The number of iterations to discard before averaging the parameter estimates (default is half of `n_iterations`).
 
 ```{r, results="hide"}
-set.seed(1)
+# set.seed(1)
 result_qol <- cocluster(
   x = x_qol,
-  K = 2, L = 2,
+  K = 3, L = 3,
   model = cub(m_qol),
-  n_init = 3,
-  n_iterations = 10,
-  n_gibbs_iterations = 2,
+  n_init = 10,
+  n_iterations = 100,
+  n_gibbs_iterations = 4,
   eps = 1e-6,
-  burn_in = 5,
+  burn_in = 40,
   choose_n_clusters = FALSE # Fixed K and L for speed in this vignette
 )
 best_qol <- result_qol$selected_lbm
@@ -167,7 +183,7 @@ data.frame(
 
 To visualize the clusters, you can sort your data matrix by the estimated row and column assignments and plot it using base R's `image()` function:
 
-```{r, fig.width=6, fig.height=4}
+```{r, fig.width=5, fig.height=5}
 # Sort data by cluster assignments
 sorted_x <- x_qol[order(best_qol$z$row), order(best_qol$z$col)]
 
