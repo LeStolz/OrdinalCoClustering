@@ -1,28 +1,61 @@
 #' Co-cluster data by fitting a latent block model using any observation model
 #' and SEM-Gibbs estimation.
 #'
-#' @param x Matrix of ordinal observations.
-#' @param K Number of row clusters.
-#' @param L Number of column clusters.
-#' @param model Observation model.
-#' @param n_init Number of random initializations.
+#' This function performs simultaneous clustering of the rows and columns of an
+#' ordinal data matrix. It relies on the Latent Block Model (LBM) and uses a
+#' Stochastic Expectation-Maximization (SEM) algorithm coupled with Gibbs sampling.
+#'
+#' @param x Matrix of ordinal observations. Missing values (`NA`) are natively supported.
+#' @param K Initial number of row clusters.
+#' @param L Initial number of column clusters.
+#' @param model Observation model. This should be a list of functions defining the 
+#'   probability distribution of a block. For ordinal data, use `cub(m)` where `m` 
+#'   is the maximum number of ordinal categories.
+#' @param n_init Number of random initializations. Multiple initializations are 
+#'   strongly recommended to avoid local maxima.
 #' @param n_iterations Number of iterations for the SEM-Gibbs algorithm.
-#' @param n_gibbs_iterations Number of Gibbs iterations for the SEM-Gibbs algorithm.
+#' @param n_gibbs_iterations Number of Gibbs iterations for the SEM-Gibbs algorithm 
+#'   (typically performed within the E-step).
 #' @param eps Convergence threshold for the SEM-Gibbs algorithm.
-#' @param burn_in Number of burn-in iterations for the SEM-Gibbs algorithm.
-#' @param choose_n_clusters Whether the function will greedily select the best number of clusters based on ICL.
+#' @param burn_in Number of burn-in iterations for the SEM-Gibbs algorithm. 
+#'   Parameter estimates are averaged after this burn-in period.
+#' @param choose_n_clusters Logical. If `TRUE`, the function will greedily search 
+#'   the neighborhood of `(K, L)` and select the optimal number of clusters based 
+#'   on the Integrated Completed Likelihood (ICL) criterion.
 #'
 #' @return An object of class `cocluster` containing:
 #' \describe{
-#'   \item{lbms}{List of all models.}
-#'   \item{selected_lbm}{The selected model.}
+#'   \item{lbms}{List of all models evaluated.}
+#'   \item{selected_lbm}{The optimal model selected based on ICL.}
 #'   \item{selected_lbm$icl}{ICL value of the selected model.}
-#'   \item{selected_lbm$p$row}{Estimated probabilities of row-cluster membership.}
-#'   \item{selected_lbm$p$col}{Estimated probabilities of column-cluster membership.}
+#'   \item{selected_lbm$p$row}{Estimated global probabilities of row-cluster membership.}
+#'   \item{selected_lbm$p$col}{Estimated global probabilities of column-cluster membership.}
 #'   \item{selected_lbm$z$row}{Final row-cluster assignments.}
 #'   \item{selected_lbm$z$col}{Final column-cluster assignments.}
-#'   \item{selected_lbm$block_parameters}{Estimated parameters of each block.}
+#'   \item{selected_lbm$block_parameters}{Estimated CUB parameters (`pi` and `xi`) of each block.}
 #' }
+#' 
+#' @examples
+#' # 1. Create a small random ordinal matrix (20 rows, 10 columns, 1 to 5 scale)
+#' set.seed(42)
+#' x <- matrix(sample(1:5, 200, replace = TRUE), nrow = 20, ncol = 10)
+#' 
+#' # 2. Fit the co-clustering model 
+#' # (using small iterations for the sake of the example)
+#' result <- cocluster(
+#'   x = x, 
+#'   K = 2, 
+#'   L = 2, 
+#'   model = cub(5), 
+#'   n_init = 2, 
+#'   n_iterations = 10, 
+#'   n_gibbs_iterations = 2,
+#'   choose_n_clusters = FALSE
+#' )
+#' 
+#' # 3. Inspect the optimal row and column assignments
+#' result$selected_lbm$z$row
+#' result$selected_lbm$z$col
 #'
 #' @export
 cocluster <- function(x,

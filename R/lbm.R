@@ -1,4 +1,4 @@
-#' Create a Latent Block Model
+#' Cocluster data using a Latent Block Model
 #'
 #' @param x Matrix of observations.
 #' @param K Number of row clusters.

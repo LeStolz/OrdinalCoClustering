@@ -1,15 +1,14 @@
 Package: CoCluster
-Title: Allows Co-clustering of Data Using the Latent Block Model with Native CUB Observation Model Support
+Title: Allows Co-Clustering of Data Using the Latent Block Model with Native Support for CUB Ordinal Data.
 Version: 0.0.0.9000
 Authors@R:
     person("Nam Dang", "VO", , "vonamdang03@gmail.com", role = c("aut", "cre"))
-Description: What the package does (one paragraph).
-License: `use_mit_license()`, `use_gpl3_license()` or friends to pick a
-    license
+Description: This package leverages the **Latent Block Model (LBM)** equipped natively with the **Combination of Uniform and shifted Binomial (CUB)** observation model, tailored for ordinal data to account for both deliberate human choices and random uncertainty, and can easily be extended to use other models. It estimates the optimal co-clustering using the **SEM-Gibbs** algorithm and can automatically search for the optimal number of clusters using a greedy surface search algorithm and the **Integrated Completed Likelihood (ICL)** criterion.
+License: GPL-3
 Config/roxygen2/version: 8.1.0
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
-Suggests: 
+Suggests:
     knitr,
     rmarkdown,
     ordinalClust,

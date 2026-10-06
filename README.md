@@ -1,16 +1,19 @@
-# OrdinalCoClust
+# CoCluster
+
+**CoCluster** is an R package designed to simultaneously cluster (co-cluster) the rows and columns of data matrices with native support for ordinal data.
+
+Standard clustering algorithms group only observation rows. In high-dimensional questionnaire data—such as quality-of-life surveys where responses are given on ordinal Likert scales—co-clustering is far more powerful. It reduces the entire dataset into a concise summary of "types of respondents" and "types of questions" by finding homogeneous, interacting blocks of data.
+
+This package leverages the **Latent Block Model (LBM)** equipped natively with the **Combination of Uniform and shifted Binomial (CUB)** observation model, tailored for ordinal data to account for both deliberate human choices and random uncertainty, and can easily be extended to use other models. It estimates the optimal co-clustering using the **SEM-Gibbs** algorithm and can automatically search for the optimal number of clusters using a greedy surface search algorithm and the **Integrated Completed Likelihood (ICL)** criterion.
 
 ## To dos
 
-Example ordinal data + Test
-
-Fusion
 un package R (en format .tar.gz installer sur Mac) avec la function avec une aide pour elle, incluant un exemple d’utilisation,
 une vignette pour votre package R illustrant l’utilisation de votre package,
 un oral au cours duquel je vous demanderai de m’expliquer certaines parties de votre code.
 
 # To test
-Gibbs, EM, CUB, SEM, LBM, Coclustering, ICL for selecting number of blocks, Random init, p$row, p$col, z$row, z$col, icl, block_parameters, best model.
+example, Gibbs, EM, CUB, SEM, LBM, Coclustering, ICL for selecting number of blocks, Random init, p$row, p$col, z$row, z$col, icl, block_parameters, best model.
 
 ## References
 
