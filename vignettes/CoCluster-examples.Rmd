@@ -16,15 +16,11 @@ knitr::opts_chunk$set(
 
 ## 1. Introduction and Motivation
 
-**What problem does the package solve?**
-The `CoCluster` package allows for the simultaneous clustering (co-clustering or bi-clustering) of ordinal data matrices. Specifically, it groups rows (e.g., individuals, patients) and columns (e.g., questions, features) at the same time to discover homogeneous blocks of data.
+**What problem does the package solve?** The `CoCluster` package allows for the simultaneous clustering (co-clustering or bi-clustering) of ordinal data matrices. Specifically, it groups rows (e.g., individuals, patients) and columns (e.g., questions, features) at the same time to discover homogeneous blocks of data.
 
-**Why is this problem interesting?**
-In many domains like psychometrics or quality-of-life surveys, data is ordinal (e.g., Likert scales from 1 to 5). Standard clustering only groups rows. Co-clustering reduces the dataset into a concise summary of "types of patients" and "types of questions", highlighting the underlying interactions between them.
+**Why is this problem interesting?** In many domains like psychometrics or quality-of-life surveys, data is ordinal (e.g., Likert scales from 1 to 5). Standard clustering only groups rows. Co-clustering reduces the dataset into a concise summary of "types of patients" and "types of questions", highlighting the underlying interactions between them.
 
-**Methodology and Mathematical Description**
-The package implements the **Latent Block Model (LBM)**. Suppose we have an $N \times D$ data matrix $\mathbf{X}$. The LBM assumes there exists an underlying partition of rows into $K$ clusters and columns into $L$ clusters.
-For a row $i$ in cluster $k$ and column $j$ in cluster $l$, the observation $x_{ij}$ is drawn from a probability distribution specific to the block $(k, l)$. 
+**Methodology and Mathematical Description** The package implements the **Latent Block Model (LBM)**. Suppose we have an $N \times D$ data matrix $\mathbf{X}$. The LBM assumes there exists an underlying partition of rows into $K$ clusters and columns into $L$ clusters. For a row $i$ in cluster $k$ and column $j$ in cluster $l$, the observation $x_{ij}$ is drawn from a probability distribution specific to the block $(k, l)$.
 
 This package natively equips the LBM with the **CUB (Combination of Uniform and shifted Binomial)** observation model for ordinal data. An ordinal response $R \in \{1, \dots, m\}$ is modeled as a mixture of a deliberate choice (shifted binomial, parameterized by a feeling parameter $\xi$) and a random choice (discrete uniform distribution, representing uncertainty), governed by a mixing weight $\pi$:
 
@@ -32,13 +28,9 @@ $$P(x_{ij} = r \mid z_i=k, w_j=l) = \pi_{kl} \binom{m-1}{r-1} (1-\xi_{kl})^{r-1}
 
 A value of $\xi_{kl}$ close to 0 corresponds to a tendency for higher ordinal ratings in that block, while $\pi_{kl}$ near 1 means less random guessing.
 
-**Algorithm Details**
-Parameters are estimated via the **SEM-Gibbs (Stochastic Expectation-Maximization with Gibbs sampling)** algorithm. Because the true posterior distribution of the LBM is intractable, SEM-Gibbs alternates between sampling row and column assignments (Stochastic E-step via Gibbs sampling) and maximizing the block parameters using standard EM for the CUB model (M-step).
+**Algorithm Details** Parameters are estimated via the **SEM-Gibbs (Stochastic Expectation-Maximization with Gibbs sampling)** algorithm. Because the true posterior distribution of the LBM is intractable, SEM-Gibbs alternates between sampling row and column assignments (Stochastic E-step via Gibbs sampling) and maximizing the block parameters using standard EM for the CUB model (M-step).
 
-**Selecting K and L**
-The optimal number of row clusters ($K$) and column clusters ($L$) is selected using the **Integrated Completed Likelihood (ICL)** criterion. The ICL penalizes the log-likelihood for model complexity (number of parameters) and entropy (uncertainty in cluster assignments):
-$$ \text{ICL} = \log L(\mathbf{X}, \mathbf{z}, \mathbf{w} \mid \hat{\theta}) - \frac{K-1}{2}\log N - \frac{L-1}{2}\log D - \frac{KLv}{2}\log(ND) $$
-where $v$ is the number of parameters per block (2 for the CUB model).
+**Selecting K and L** The optimal number of row clusters ($K$) and column clusters ($L$) is selected using the **Integrated Completed Likelihood (ICL)** criterion. The ICL penalizes the log-likelihood for model complexity (number of parameters) and entropy (uncertainty in cluster assignments): $$ \text{ICL} = \log L(\mathbf{X}, \mathbf{z}, \mathbf{w} \mid \hat{\theta}) - \frac{K-1}{2}\log N - \frac{L-1}{2}\log D - \frac{KLv}{2}\log(ND) $$ where $v$ is the number of parameters per block (2 for the CUB model).
 
 ## 2. Installation and Setup
 
@@ -81,31 +73,46 @@ result_sim <- cocluster(
 Once the model is fitted, the `cocluster` object contains the best model selected by ICL under `$selected_lbm`.
 
 **Model Selection:**
+
 ```{r}
 best_sim <- result_sim$selected_lbm
 print(c(K_optimal = best_sim$K$row, L_optimal = best_sim$K$col))
 ```
+
 This tells us the optimal number of clusters discovered by the ICL greedy search.
 
-**Extracting Clusters:**
-To obtain the hard cluster assignments for each row and column, you can inspect `$z$:
+**Extracting Clusters:** To obtain the hard cluster assignments for each row and column, you can inspect \`$z$:
+
 ```{r}
 table(best_sim$z$col) # The size of each column cluster
 ```
 
-**Cluster Proportions:**
-You can retrieve the estimated mixing proportions for the rows and columns:
+**Cluster Proportions:** You can retrieve the estimated mixing proportions for the rows and columns:
+
 ```{r}
 print(best_sim$p$row)
 print(best_sim$p$col)
 ```
+
 These vectors represent the estimated global proportions of the clusters. For example, the values in `p$row` indicate the expected fraction of the total rows belonging to each row cluster.
+
+**Visualization:** We can visually verify the clustering structure by sorting the matrix by the predicted row and column clusters:
+
+```{r, fig.width=6, fig.height=4}
+sorted_x_sim <- x_sim[order(best_sim$z$row), order(best_sim$z$col)]
+image(t(sorted_x_sim)[, nrow(sorted_x_sim):1], 
+      col = heat.colors(m_sim), 
+      axes = FALSE, 
+      main = "Simulated Co-clustered Data Matrix")
+box()
+```
 
 ## 4. Advanced Usage: Quality-of-Life Questionnaire Data
 
 For a more advanced use case, we will co-cluster a real-world dataset and explore the package's hyper-parameters and visualization capabilities.
 
 ### Description of the Dataset
+
 We use the `dataqol` dataset from the `ordinalClust` package. It consists of a quality-of-life questionnaire containing 117 patients (rows) and 30 questions (columns).
 
 The CUB observation model we are using requires that all ordinal variables share the exact same number of categories $m$. In the `dataqol` dataset, questions 1 through 28 have 4 categories, while questions 29 and 30 have 7 categories. Therefore, we must restrict our dataset to `q1` through `q28` and set $m=4$. We also drop the patient ID column.
@@ -122,12 +129,7 @@ table(x_qol, useNA = "ifany")
 
 ### Advanced Model Fitting
 
-We can finely tune the SEM-Gibbs algorithm using several optional parameters:
-- `n_init`: The number of random initializations to avoid local maxima.
-- `n_iterations`: Total number of SEM iterations.
-- `n_gibbs_iterations`: The number of Gibbs sampling passes inside the E-step.
-- `eps`: Convergence threshold for the log-likelihood (default `1e-9`).
-- `burn_in`: The number of iterations to discard before averaging the parameter estimates (default is half of `n_iterations`).
+We can finely tune the SEM-Gibbs algorithm using several optional parameters: - `n_init`: The number of random initializations to avoid local maxima. - `n_iterations`: Total number of SEM iterations. - `n_gibbs_iterations`: The number of Gibbs sampling passes inside the E-step. - `eps`: Convergence threshold for the log-likelihood (default `1e-9`). - `burn_in`: The number of iterations to discard before averaging the parameter estimates (default is half of `n_iterations`).
 
 ```{r, results="hide"}
 set.seed(1)
@@ -148,6 +150,7 @@ best_qol <- result_qol$selected_lbm
 ### Interpreting Block Parameters
 
 The estimated CUB parameters for each block (`pi` is the weight of the deliberate choice, `xi` is the feeling parameter) are stored in `block_parameters`:
+
 ```{r blocks}
 blocks <- best_qol$block_parameters
 data.frame(
@@ -157,11 +160,13 @@ data.frame(
   xi = sapply(blocks, function(b) round(b$xi, 3))
 )
 ```
+
 **How to interpret:** A block with a low `xi` contains mostly high ratings, while a block with a high `xi` contains mostly low ratings. In `dataqol`, a lower rating generally indicates fewer difficulties (you can verify this via `?ordinalClust::dataqol`). Therefore, a block with high `xi` corresponds to a cluster of patients who experience minimal discomfort for that specific cluster of questions.
 
 ### Visualization
 
 To visualize the clusters, you can sort your data matrix by the estimated row and column assignments and plot it using base R's `image()` function:
+
 ```{r, fig.width=6, fig.height=4}
 # Sort data by cluster assignments
 sorted_x <- x_qol[order(best_qol$z$row), order(best_qol$z$col)]
@@ -173,6 +178,7 @@ image(t(sorted_x)[, nrow(sorted_x):1],
       main = "Co-clustered Data Matrix")
 box()
 ```
+
 *Darker/lighter regions represent the homogeneous blocks discovered by the algorithm.*
 
 ### Manual Model Selection (Grid Search)
@@ -194,22 +200,18 @@ for (K in 2:4) {
 }
 icl_table
 ```
+
 *(This code block is not evaluated here as an exhaustive grid search takes a couple of minutes to run.)*
 
 ## 5. Extending the Package: Using Different Observation Models
 
-The package is designed to be extensible. You are not strictly limited to the CUB model. The `model` argument in `cocluster()` accepts any list of functions defining an observation model. 
-To implement your own model (e.g., a Poisson or Gaussian block model), you simply need to provide a list containing:
-1. `probability(x, parameters)`: Computes the probability of a single observation.
-2. `log_probability(block, parameters)`: Computes the log-probability of an entire matrix block.
-3. `estimate_parameters(block)`: Returns a list of estimated parameters for a given block matrix.
-4. `number_of_parameters`: An integer used to compute the ICL penalty.
+The package is designed to be extensible. You are not strictly limited to the CUB model. The `model` argument in `cocluster()` accepts any list of functions defining an observation model. To implement your own model (e.g., a Poisson or Gaussian block model), you simply need to provide a list containing: 1. `probability(x, parameters)`: Computes the probability of a single observation. 2. `log_probability(block, parameters)`: Computes the log-probability of an entire matrix block. 3. `estimate_parameters(block)`: Returns a list of estimated parameters for a given block matrix. 4. `number_of_parameters`: An integer used to compute the ICL penalty.
 
 ## 6. Comparison with Literature and References
 
 Jacques and Biernacki (2018) performed a co-clustering of this exact `dataqol` ordinal dataset using the BOS model (Section 5 of their paper). The number of blocks and the groupings of the questions can be compared directly with our results, keeping in mind that the underlying assumptions of the CUB and BOS models differ.
 
-* Piccolo, D. (2003). On the moments of a mixture of uniform and shifted binomial random variables. *Quaderni di Statistica*, 5, 85-104.
-* Govaert, G., & Nadif, M. (2008). Block clustering with Bernoulli mixture models: Comparison of different approaches. *Computational Statistics & Data Analysis*, 52(6), 3233-3245.
-* Keribin, C., Brault, V., Celeux, G., & Govaert, G. (2012). Estimation and selection for the latent block model on categorical data. *Statistics and Computing*, 25(6), 1201-1216.
-* Jacques, J., & Biernacki, C. (2018). Model-based co-clustering for ordinal data. *Computational Statistics & Data Analysis*, 123, 101-115.
+- Piccolo, D. (2003). On the moments of a mixture of uniform and shifted binomial random variables. *Quaderni di Statistica*, 5, 85-104.
+- Govaert, G., & Nadif, M. (2008). Block clustering with Bernoulli mixture models: Comparison of different approaches. *Computational Statistics & Data Analysis*, 52(6), 3233-3245.
+- Keribin, C., Brault, V., Celeux, G., & Govaert, G. (2012). Estimation and selection for the latent block model on categorical data. *Statistics and Computing*, 25(6), 1201-1216.
+- Jacques, J., & Biernacki, C. (2018). Model-based co-clustering for ordinal data. *Computational Statistics & Data Analysis*, 123, 101-115.

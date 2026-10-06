@@ -1,15 +1,32 @@
-#' Cocluster data using a Latent Block Model
+#' Create a Latent Block Model to estimate and model a matrix of observations.
 #'
 #' @param x Matrix of observations.
 #' @param K Number of row clusters.
 #' @param L Number of column clusters.
-#' @param model Observation model.
-#' @param n_iterations Number of iterations for the SEM-Gibbs algorithm.
-#' @param n_gibbs_iterations Number of Gibbs iterations for the SEM-Gibbs algorithm.
+#' @param model Observation model as a list of functions defining the probability distribution of a block containing:
+#' \describe{
+#'   \item{probability}{Function to compute the probability of given responses under the observation model.}
+#'   \item{log_probability}{Function to compute the log probability of given responses under the observation model.}
+#'   \item{estimate_parameters}{Function to estimate the parameters of the observation model.}
+#'   \item{number_of_parameters}{The number of parameters in the observation model.}
+#' }
+#' @param n_iterations Number of iterations for the SEM-Gibbs algorithm used to estimate the model.
+#' @param n_gibbs_iterations Number of Gibbs iterations for the SEM-Gibbs algorithm used to estimate the model.
 #' @param eps Convergence threshold for the SEM-Gibbs algorithm.
 #' @param burn_in Number of burn-in iterations for the SEM-Gibbs algorithm.
 #'
-#' @return An object of class `lbm`.
+#' @return An object of class `lbm` containing:
+#' \describe{
+#'   \item{x}{The data matrix.}
+#'   \item{N}{A list containing the number of rows (`row`) and columns (`col`) of the data matrix.}
+#'   \item{K}{A list containing the number of row clusters (`row`) and column clusters (`col`).}
+#'   \item{z}{A list containing the row-cluster (`row`) and column-cluster (`col`) assignments.}
+#'   \item{p}{A list containing the prior probabilities of row-cluster (`row`) and column-cluster (`col`) membership.}
+#'   \item{block_parameters}
+#'     {A matrix of the estimated observation model parameters for each block, indexed by `[[row_cluster, col_cluster]]`.}
+#'   \item{model}{The observation model used.}
+#'   \item{icl}{The Integrated Completed Likelihood (ICL) value of the model.}
+#' }
 #' @export
 lbm <- function(x,
                 K,
@@ -42,9 +59,9 @@ lbm <- function(x,
 #' @param x Matrix of observations.
 #' @param K Number of row clusters.
 #' @param L Number of column clusters.
-#' @param model Observation model.
+#' @param model Observation model as a list of functions containing the `estimate_parameters` function.
 #'
-#' @return An object of class `lbm`.
+#' @return An object of class \code{\link{lbm}} containing the initial random assignments and parameters.
 #' @noRd
 initialize_lbm <- function(x,
                            K,
@@ -90,8 +107,11 @@ initialize_lbm <- function(x,
 }
 
 
-#' Estimate parameters for each LBM block
+#' Estimate parameters for each Latent Block Model block
 #'
+#' @param lbm An object of class \code{\link{lbm}}.
+#'
+#' @return A matrix containing the estimated parameters for each block.
 #' @noRd
 estimate_block_parameters <- function(lbm) {
   x <- lbm$x
@@ -120,9 +140,9 @@ estimate_block_parameters <- function(lbm) {
 }
 
 
-#' Calculate the complete log-likelihood
+#' Calculate the complete log-likelihood of the Latent Block Model
 #'
-#' @param lbm An `lbm` object.
+#' @param lbm An object of class \code{\link{lbm}}.
 #'
 #' @return The complete log-likelihood.
 #' @export
@@ -155,9 +175,9 @@ log_likelihood.lbm <- function(lbm) {
 }
 
 
-#' Calculate the ICL
+#' Calculate the ICL of the Latent Block Model
 #'
-#' @param lbm An `lbm` object.
+#' @param lbm An object of class \code{\link{lbm}}.
 #'
 #' @return The ICL value.
 #' @export
@@ -180,16 +200,19 @@ icl.lbm <- function(lbm) {
 }
 
 
-#' Calculate conditional cluster probabilities
+#' Calculate the conditional cluster probabilities
+#' that a row or column belongs to each cluster given the other dimension's assignments and parameters.
 #'
-#' Probabilité que la ligne (ou colonne) `index` appartienne à chaque
-#' cluster, sachant les affectations de l'autre dimension et les paramètres.
-#' Calcul en log (log-sum-exp) pour éviter le sous-dépassement numérique.
-#' Les NA sont ignorés car `log_probability` leur donne 0.
+#' The probabilities are calculated in log-space to avoid numerical underflow.
 #'
+#' @param lbm An object of class \code{\link{lbm}}.
+#' @param dimension String of either `"row"` or `"col"` to specify if the index refers to a row or column
+#' @param index The index of the row or column to calculate probabilities for.
+#'
+#' @return A vector of conditional probabilities corresponding to each cluster.
 #' @noRd
 calculate_p_zi_ks__x_theta <- function(lbm, dimension, index) {
-  K <- lbm$K[dimension]
+  K <- lbm$K[[dimension]]
   log_p_zi_ks <- numeric(K)
 
   for (k in seq_len(K)) {
@@ -211,12 +234,12 @@ calculate_p_zi_ks__x_theta <- function(lbm, dimension, index) {
         log_p <- log_p + sum(lbm$model$log_probability(block, parameters))
       }
     } else if (dimension == "col") {
-      for (k in seq_len(lbm$K$row)) {
-        row_indices <- which(lbm$z$row == k)
+      for (l in seq_len(lbm$K$row)) {
+        row_indices <- which(lbm$z$row == l)
         if (length(row_indices) == 0) next
 
         block <- lbm$x[row_indices, index, drop = FALSE]
-        parameters <- lbm$block_parameters[[k, l]]
+        parameters <- lbm$block_parameters[[l, k]]
 
         log_p <- log_p + sum(lbm$model$log_probability(block, parameters))
       }
@@ -237,8 +260,16 @@ calculate_p_zi_ks__x_theta <- function(lbm, dimension, index) {
 }
 
 
-#' Sampling cluster assignments using Gibbs
+#' Sample cluster assignments using Gibbs
 #'
+#' Gibbs calculates the conditional probabilities of cluster assignments for each row or column,
+#' and samples the new cluster assignments from these probabilities.
+#'
+#' @param lbm An object of class \code{\link{lbm}}.
+#' @param dimension String of either `"row"` or `"col"`, specifying which dimension to sample.
+#' @param hard_assignment If `TRUE`, assigns to the cluster with maximum probability instead of sampling.
+#'
+#' @return The updated \code{\link{lbm}} object with new cluster assignments.
 #' @noRd
 gibbs_sample_cluster <- function(lbm, dimension, hard_assignment = FALSE) {
   N <- lbm$N[[dimension]]
@@ -268,15 +299,19 @@ gibbs_sample_cluster <- function(lbm, dimension, hard_assignment = FALSE) {
 }
 
 
-#' SEM-Gibbs algorithm
+#' Perform the SEM-Gibbs algorithm
 #' https://inria.hal.science/inria-00494796/document
 #'
-#' @param lbm An `lbm` object.
-#' @param n_gibbs_iterations Number of Gibbs iterations in the E-S step.
+#' The SEM-Gibbs algorithm iteratively samples cluster assignments
+#' and estimates parameters for the Latent Block Model using maximum likelihood estimation.
+#'
+#' @param lbm An object of class \code{\link{lbm}}.
 #' @param n_iterations Number of SEM iterations.
+#' @param n_gibbs_iterations Number of Gibbs iterations in the E step.
 #' @param eps Convergence threshold.
 #' @param burn_in Number of iterations to discard as burn-in.
 #'
+#' @return An object of class \code{\link{lbm}} containing the final estimated parameters and assignments.
 #' @noRd
 sem_gibbs <- function(lbm, n_iterations, n_gibbs_iterations, eps, burn_in) {
   parameter_history <- vector("list", n_iterations)
@@ -330,11 +365,15 @@ sem_gibbs <- function(lbm, n_iterations, n_gibbs_iterations, eps, burn_in) {
 
 #' Average parameter estimates obtained after burn-in
 #'
-#' @param lbm An `lbm` object.
+#' After burn-in, The SEM-Gibbs algorithm samples parameters around the maximum likelihood estimates.
+#' This function averages the estimates after burn-in to provide a stable estimate of the model parameters
+#' and calculates the final cluster assignments based on these averaged parameters.
+#'
+#' @param lbm An object of class \code{\link{lbm}}.
 #' @param parameter_history List of parameter estimates.
 #' @param n_iterations Number of iterations for the SEM-Gibbs algorithm.
 #'
-#' @return Averaged model parameters.
+#' @return An object of class \code{\link{lbm}} containing the averaged parameters and final cluster assignments.
 #'
 #' @noRd
 calculate_final_parameters <- function(lbm, parameter_history, n_iterations) {

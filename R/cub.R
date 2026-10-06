@@ -1,14 +1,11 @@
-#' Probability of a response under the CUB model
-#'
-#' Mixture of a deliberate choice (shifted binomial, parameter `xi`) and
-#' a random choice (uniform). Note: `xi` close to 0 means high ratings.
+#' Calculate the probability of a response under the CUB model
 #'
 #' @param r Vector of responses between 1 and m.
 #' @param m Number of ordinal categories.
 #' @param pi_ Probability of a deliberate choice.
 #' @param xi Feeling parameter.
-#' @return A vector of probabilities, same length as `r`.
-#' @noRd
+#' @return A vector of probabilities corresponding to each response in `r`.
+#' @export
 cub_probability <- function(r, m, pi_, xi) {
   # P(R = r) = pi * b_r(xi) + (1 - pi) / m
   # dbinom(r - 1, m - 1, 1 - xi) = probabilité d'avoir r - 1 succès sur
@@ -18,14 +15,16 @@ cub_probability <- function(r, m, pi_, xi) {
   pi_ * dbinom(r - 1, size = m - 1, prob = 1 - xi) + (1 - pi_) / m
 }
 
-#' Log-probability of each cell of a block under the CUB model
+
+#' Calculate the log-probability of each cell of a block under the CUB model
 #'
 #' @param block Matrix of responses between 1 and m.
 #' @param m Number of ordinal categories.
 #' @param pi_ Probability of a deliberate choice.
 #' @param xi Feeling parameter.
-#' @return A block of log-probabilities, same shape as `block`. Missing responses (NA) give 0 so that they are ignored in a sum.
-#' @noRd
+#' @return A block of log-probabilities corresponding to each response in `block`.
+#' Missing responses (NA) give 0 so that they are ignored in a sum.
+#' @export
 cub_log_probability <- function(block, m, pi_, xi) {
   # On travaille en log : un produit de nombreuses probabilités tombe à 0
   # sur ordinateur, alors qu'une somme de logs reste stable.
@@ -37,15 +36,16 @@ cub_log_probability <- function(block, m, pi_, xi) {
   log_p
 }
 
-#' Posterior probability that each response comes from the deliberate
-#' choice component rather than from the uniform component.
+
+#' Calculate the posterior probability that each response comes from the
+#' deliberate choice component rather than from the uniform component.
 #'
 #' @param r Vector of responses between 1 and m (no NA).
 #' @param m Number of ordinal categories.
-#' @param pi_ Current value of pi.
-#' @param xi Current value of xi.
-#' @return A vector tau with values in 0, 1, same length as `r`.
-#' @noRd
+#' @param pi_ Current value of probability of deliberate choice.
+#' @param xi Current value of feeling parameter.
+#' @return A vector tau with posterior probabilities corresponding to each response in `r`.
+#' @export
 e_zi__pi_xi <- function(r, m, pi_, xi) {
   # Règle de Bayes : tau_i = pi * b(r_i) / P(r_i)
   # = part du "choix réfléchi" dans la probabilité totale de la note r_i.
@@ -53,10 +53,11 @@ e_zi__pi_xi <- function(r, m, pi_, xi) {
   pi_ * dbinom(r - 1, size = m - 1, prob = 1 - xi) / cub_probability(r, m, pi_, xi)
 }
 
-#' M-step of the EM algorithm for the CUB model
+
+#' Perform the M-step of the EM algorithm for the CUB model
 #'
 #' @param r Vector of responses between 1 and m (no NA).
-#' @param tau Posterior probabilities from the E-step.
+#' @param tau Vector of posterior probabilities corresponding to each response in `r` from the E-step.
 #' @param m Number of ordinal categories.
 #' @return A list with the updated `pi_` and `xi`.
 #' @noRd
@@ -76,15 +77,16 @@ cub_m_step <- function(r, tau, m) {
   list(pi_ = pi_new, xi = xi_new)
 }
 
-#' EM algorithm for the CUB model on a vector of responses
+
+#' Perform the EM algorithm to estimate the parameters of a CUB model on a vector of responses
 #'
 #' @param r Vector of responses between 1 and m.
 #' @param m Number of ordinal categories.
 #' @param n_iterations Number of iterations for the EM algorithm.
 #' @param eps Convergence threshold for the EM algorithm.
-#' @param bound Keeps pi and xi inside bound, 1 - bound to avoid log(0).
-#' @return A named list `list(pi_ = , xi = )`.
-#' @noRd
+#' @param bound Keeps `pi_` and `xi` inside \[bound, 1 - bound\] to avoid log(0).
+#' @return A list with the estimated `pi_` and `xi`.
+#' @export
 cub_em <- function(r, m, n_iterations = 200, eps = 1e-6,
                    bound = 1e-3) {
   r <- r[!is.na(r)]
@@ -118,12 +120,21 @@ cub_em <- function(r, m, n_iterations = 200, eps = 1e-6,
   list(pi_ = pi_, xi = xi)
 }
 
-#' Create a CUB observation model
+
+#' Create a CUB observation model to estimate and model ordinal data.
 #'
-#' Returns the list of functions expected by [cocluster()].
+#' The CUB model is a mixture of a deliberate choice
+#' (shifted binomial with feeling parameter `xi`, `xi` close to 0 means high ratings)
+#' and a random choice (uniform).
 #'
 #' @param m Number of ordinal categories (responses are in 1, ..., m).
-#' @return A list defining the CUB model.
+#' @return A list containing:
+#' \describe{
+#'   \item{probability}{Function to compute the probability of given responses under the CUB model.}
+#'   \item{log_probability}{Function to compute the log probability of given responses under the CUB model.}
+#'   \item{estimate_parameters}{Function to estimate the parameters of the CUB model.}
+#'   \item{number_of_parameters}{The number of parameters in the CUB model.}
+#' }
 #' @export
 cub <- function(m) {
   # Fonction "usine" : m est mémorisé par les 3 fonctions ci-dessous

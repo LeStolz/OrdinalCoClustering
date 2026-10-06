@@ -2,7 +2,7 @@
 % Please edit documentation in R/cub.R
 \name{cub}
 \alias{cub}
-\title{Create a CUB observation model}
+\title{Create a CUB observation model to estimate and model ordinal data.}
 \usage{
 cub(m)
 }
@@ -10,8 +10,16 @@ cub(m)
 \item{m}{Number of ordinal categories (responses are in 1, ..., m).}
 }
 \value{
-A list defining the CUB model.
+A list containing:
+\describe{
+\item{probability}{Function to compute the probability of given responses under the CUB model.}
+\item{log_probability}{Function to compute the log probability of given responses under the CUB model.}
+\item{estimate_parameters}{Function to estimate the parameters of the CUB model.}
+\item{number_of_parameters}{The number of parameters in the CUB model.}
+}
 }
 \description{
-Returns the list of functions expected by \code{\link[=cocluster]{cocluster()}}.
+The CUB model is a mixture of a deliberate choice
+(shifted binomial with feeling parameter \code{xi}, \code{xi} close to 0 means high ratings)
+and a random choice (uniform).
 }

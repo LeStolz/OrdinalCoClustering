@@ -2,16 +2,23 @@
 % Please edit documentation in R/lbm.R
 \name{log_likelihood.lbm}
 \alias{log_likelihood.lbm}
-\title{Calculate the complete log-likelihood}
+\title{Calculate the complete log-likelihood of the Latent Block Model}
 \usage{
 \method{log_likelihood}{lbm}(lbm)
 }
 \arguments{
-\item{lbm}{An \code{lbm} object.}
+\item{lbm}{An object of class \code{\link{lbm}} containing:
+\describe{
+\item{x}{The data matrix.}
+\item{z}{A list containing the cluster assignments.}
+\item{p}{A list containing the prior probabilities of cluster membership.}
+\item{block_parameters}{Estimated observation model parameters of each block.}
+\item{model}{The observation model containing the \code{log_probability} function.}
+}}
 }
 \value{
 The complete log-likelihood.
 }
 \description{
-Calculate the complete log-likelihood
+Calculate the complete log-likelihood of the Latent Block Model
 }

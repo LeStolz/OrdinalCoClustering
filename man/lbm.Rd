@@ -2,7 +2,7 @@
 % Please edit documentation in R/lbm.R
 \name{lbm}
 \alias{lbm}
-\title{Create a Latent Block Model}
+\title{Create a Latent Block Model to estimate and model a matrix of observations.}
 \usage{
 lbm(x, K, L, model, n_iterations, n_gibbs_iterations, eps, burn_in)
 }
@@ -13,19 +13,36 @@ lbm(x, K, L, model, n_iterations, n_gibbs_iterations, eps, burn_in)
 
 \item{L}{Number of column clusters.}
 
-\item{model}{Observation model.}
+\item{model}{Observation model as a list of functions defining the probability distribution of a block containing:
+\describe{
+\item{probability}{Function to compute the probability of given responses under the observation model.}
+\item{log_probability}{Function to compute the log probability of given responses under the observation model.}
+\item{estimate_parameters}{Function to estimate the parameters of the observation model.}
+\item{number_of_parameters}{The number of parameters in the observation model.}
+}}
 
-\item{n_iterations}{Number of iterations for the SEM-Gibbs algorithm.}
+\item{n_iterations}{Number of iterations for the SEM-Gibbs algorithm used to estimate the model.}
 
-\item{n_gibbs_iterations}{Number of Gibbs iterations for the SEM-Gibbs algorithm.}
+\item{n_gibbs_iterations}{Number of Gibbs iterations for the SEM-Gibbs algorithm used to estimate the model.}
 
 \item{eps}{Convergence threshold for the SEM-Gibbs algorithm.}
 
 \item{burn_in}{Number of burn-in iterations for the SEM-Gibbs algorithm.}
 }
 \value{
-An object of class \code{lbm}.
+An object of class \code{lbm} containing:
+\describe{
+\item{x}{The data matrix.}
+\item{N}{A list containing the number of rows (\code{row}) and columns (\code{col}) of the data matrix.}
+\item{K}{A list containing the number of row clusters (\code{row}) and column clusters (\code{col}).}
+\item{z}{A list containing the row-cluster (\code{row}) and column-cluster (\code{col}) assignments.}
+\item{p}{A list containing the prior probabilities of row-cluster (\code{row}) and column-cluster (\code{col}) membership.}
+\item{block_parameters}
+{A matrix of the estimated observation model parameters for each block, indexed by \verb{[[row_cluster, col_cluster]]}.}
+\item{model}{The observation model used.}
+\item{icl}{The Integrated Completed Likelihood (ICL) value of the model.}
+}
 }
 \description{
-Create a Latent Block Model
+Create a Latent Block Model to estimate and model a matrix of observations.
 }

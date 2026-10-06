@@ -7,7 +7,16 @@
 icl(model, ...)
 }
 \arguments{
-\item{model}{A \code{model} object.}
+\item{model}{An object of class \code{model} containing:
+\describe{
+\item{N}{The number of observations.}
+\item{K}{The number of clusters.}
+\item{x}{The data matrix.}
+\item{z}{A list containing the cluster assignments.}
+\item{p}{A list containing the prior probabilities of cluster membership.}
+\item{block_parameters}{Estimated observation model parameters of each cluster.}
+\item{model}{The observation model containing the \code{number_of_parameters} and the \code{log_probability} function.}
+}}
 
 \item{...}{Additional arguments.}
 }

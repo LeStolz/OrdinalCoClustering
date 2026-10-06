@@ -1,5 +1,5 @@
 Package: CoCluster
-Title: Allows Co-Clustering of Data Using the Latent Block Model with Native Support for CUB Ordinal Data.
+Title: Allows Co-Clustering of Data Using the Latent Block Model with Native Support for CUB Ordinal Data
 Version: 0.0.0.9000
 Authors@R:
     person("Nam Dang", "VO", , "vonamdang03@gmail.com", role = c("aut", "cre"))
