@@ -120,7 +120,7 @@ cocluster <- function(x,
   structure(
     list(
       lbms = lbms,
-      selected_lbm = selected_lbm,
+      selected_lbm = selected_lbm
     ),
     class = "cocluster"
   )
