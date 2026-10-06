@@ -2,12 +2,12 @@
 % Please edit documentation in R/utils.R
 \name{icl}
 \alias{icl}
-\title{Calculate the ICL}
+\title{Calculate the ICL of a model.}
 \usage{
-icl(x, ...)
+icl(model, ...)
 }
 \arguments{
-\item{x}{A \code{model} object.}
+\item{model}{A \code{model} object.}
 
 \item{...}{Additional arguments.}
 }
@@ -15,5 +15,5 @@ icl(x, ...)
 The ICL value.
 }
 \description{
-Calculate the ICL
+Calculate the ICL of a model.
 }

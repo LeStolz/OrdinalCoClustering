@@ -4,16 +4,7 @@
 \alias{lbm}
 \title{Create a Latent Block Model}
 \usage{
-lbm(
-  x,
-  K,
-  L,
-  model,
-  n_iterations = 100,
-  n_gibbs_iterations = 10,
-  eps = 0.001,
-  burn_in = floor(n_iterations/2)
-)
+lbm(x, K, L, model, n_iterations, n_gibbs_iterations, eps, burn_in)
 }
 \arguments{
 \item{x}{Matrix of observations.}

@@ -1,8 +1,8 @@
 ---
-title: "Coclustering quality-of-life questionnaire data"
+title: "Co-clustering de données d'un questionnaire de qualité de vie"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Coclustering quality-of-life questionnaire data}
+  %\VignetteIndexEntry{Co-clustering de données d'un questionnaire de qualité de vie}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -17,3 +17,121 @@ knitr::opts_chunk$set(
 ```{r setup}
 library(CoCluster)
 ```
+
+## Introduction
+
+Cette vignette montre comment réaliser un co-clustering de données ordinales
+avec le package. Le modèle utilisé est le **modèle des blocs latents** : les
+lignes (patients) et les colonnes (questions) sont partitionnées
+simultanément, et chaque bloc de la matrice de données suit une loi **CUB**.
+Les paramètres sont estimés par un algorithme **SEM-Gibbs**, et le critère
+**ICL** sert à comparer les modèles.
+
+Le modèle CUB décrit une réponse ordinale dans $\{1, \dots, m\}$ comme un
+mélange d'un choix réfléchi (binomiale décalée, paramètre $\xi$) et d'un choix
+au hasard (loi uniforme), avec le poids $\pi$ :
+
+$$P(R = r) = \pi \binom{m-1}{r-1} (1-\xi)^{r-1} \xi^{m-r} + \frac{1-\pi}{m}.$$
+
+Une valeur de $\xi$ proche de 0 correspond à des notes élevées.
+
+## Les données
+
+On utilise le jeu de données `dataqol` du package `ordinalClust` : un
+questionnaire de qualité de vie avec 117 observations et 30 questions. Le
+modèle `cub(m)` suppose le même nombre de modalités pour toutes les
+variables. On conserve donc `q1` à `q28` (4 modalités) et on retire `q29` et
+`q30` (7 modalités) ainsi que l'identifiant.
+
+```{r data}
+data(dataqol, package = "ordinalClust")
+x <- as.matrix(dataqol[, paste0("q", 1:28)])
+m <- 4
+dim(x)
+table(x, useNA = "ifany")
+```
+
+Chaque patient apparaît trois fois (la variable `Id` est répétée), alors que
+le modèle suppose des lignes indépendantes : c'est une limite de cet exemple.
+Les réponses manquantes sont ignorées dans le calcul de la vraisemblance.
+
+## Le co-clustering
+
+On ajuste un modèle à 2 clusters de lignes et 2 clusters de colonnes, avec
+plusieurs initialisations aléatoires (la meilleure selon l'ICL est conservée).
+Le nombre d'itérations est volontairement faible pour que la vignette
+s'exécute rapidement.
+
+```{r fit}
+set.seed(1)
+res <- cocluster(
+  x, K = 2, L = 2, model = cub(m),
+  n_init = 3, n_iterations = 10, n_gibbs_iterations = 2,
+  eps = 1e-6, burn_in = 5, choose_n_clusters = FALSE
+)
+best <- res$selected_lbm
+best$icl
+```
+
+## Résultats
+
+Taille des clusters de patients (lignes) puis de questions (colonnes) :
+
+```{r sizes}
+table(best$z$row)
+table(best$z$col)
+```
+
+Proportions estimées des clusters :
+
+```{r proportions}
+best$p
+```
+
+Paramètres CUB estimés pour chaque bloc (`pi` est le poids du choix réfléchi,
+`xi` le paramètre de « feeling ») :
+
+```{r blocks}
+blocks <- best$block_parameters
+data.frame(
+  cluster_ligne = rep(seq_len(nrow(blocks)), ncol(blocks)),
+  cluster_colonne = rep(seq_len(ncol(blocks)), each = nrow(blocks)),
+  pi = sapply(blocks, function(b) round(b$pi_, 3)),
+  xi = sapply(blocks, function(b) round(b$xi, 3))
+)
+```
+
+Un bloc avec un `xi` faible contient surtout des notes élevées, un bloc avec un
+`xi` élevé surtout des notes basses. Dans ce questionnaire, une note basse
+signifie en principe peu de difficultés (à vérifier avec `?dataqol`) : un `xi`
+élevé correspond alors à des patients peu gênés.
+
+## Choix du nombre de blocs
+
+On compare l'ICL pour plusieurs valeurs de $(K, L)$. La valeur la plus grande
+(la moins négative) est préférée.
+
+```{r icl, eval = FALSE}
+icl_table <- matrix(NA, 3, 3,
+  dimnames = list(paste0("K=", 2:4), paste0("L=", 2:4)))
+for (K in 2:4) for (L in 2:4) {
+  fits <- lapply(1:3, function(i) {
+    lbm(x, K, L, cub(m), n_iterations = 10, n_gibbs_iterations = 2,
+        eps = 1e-6, burn_in = 5)
+  })
+  icl_table[K - 1, L - 1] <- max(sapply(fits, function(f) f$icl))
+}
+icl_table
+```
+
+Ce morceau n'est pas exécuté lors de la compilation car il dure environ deux
+minutes. Il est aussi possible d'utiliser
+`cocluster(..., choose_n_clusters = TRUE)`, qui explore automatiquement les
+valeurs voisines de $(K, L)$.
+
+## Comparaison avec la littérature
+
+Jacques et Biernacki (2018) réalisent un co-clustering de données ordinales
+avec le modèle BOS (section 5). Le nombre de blocs et les groupes de questions
+peuvent être comparés aux nôtres, en gardant à l'esprit que les modèles
+diffèrent.

@@ -53,18 +53,17 @@ initialize_lbm <- function(x,
   N <- list(row = nrow(x), col = ncol(x))
   K <- list(row = K, col = L)
 
-  # https://www.sciencedirect.com/science/article/pii/S0167947325000647
-  # Random initialization making sure every cluster has at least one observation
+  # Initialisation aléatoire en s'assurant que chaque cluster est non vide
   repeat {
     z <- list(
-	    row = sample(seq_len(K$row), size = N$row, replace = TRUE),
-	    col = sample(seq_len(K$col), size = N$col, replace = TRUE)
-	  )
+      row = sample(seq_len(K$row), size = N$row, replace = TRUE),
+      col = sample(seq_len(K$col), size = N$col, replace = TRUE)
+    )
 
     p <- list(
-	    row = tabulate(z$row, nbins = K$row) / N$row,
-	    col = tabulate(z$col, nbins = K$col) / N$col
-	  )
+      row = tabulate(z$row, nbins = K$row) / N$row,
+      col = tabulate(z$col, nbins = K$col) / N$col
+    )
 
     if (all(p$row > 0) && all(p$col > 0)) {
       break
@@ -75,7 +74,7 @@ initialize_lbm <- function(x,
     list(
       x = x,
       N = N,
-	    K = K,
+      K = K,
       z = z,
       p = p,
       block_parameters = NULL,
@@ -183,6 +182,11 @@ icl.lbm <- function(lbm) {
 
 #' Calculate conditional cluster probabilities
 #'
+#' Probabilité que la ligne (ou colonne) `index` appartienne à chaque
+#' cluster, sachant les affectations de l'autre dimension et les paramètres.
+#' Calcul en log (log-sum-exp) pour éviter le sous-dépassement numérique.
+#' Les NA sont ignorés car `log_probability` leur donne 0.
+#'
 #' @noRd
 calculate_p_zi_ks__x_theta <- function(lbm, dimension, index) {
   K <- lbm$K[dimension]
@@ -250,11 +254,11 @@ gibbs_sample_cluster <- function(lbm, dimension, hard_assignment = FALSE) {
     if (hard_assignment) {
       new_zi <- which.max(p_zi_ks__x_theta)
     } else {
-        new_zi <- sample(
-          seq_len(K),
-          size = 1,
-          prob = p_zi_ks__x_theta
-        )
+      new_zi <- sample(
+        seq_len(K),
+        size = 1,
+        prob = p_zi_ks__x_theta
+      )
     }
 
     lbm$z[[dimension]][index] <- new_zi
@@ -280,20 +284,20 @@ sem_gibbs <- function(lbm, n_iterations, n_gibbs_iterations, eps, burn_in) {
   n_iter_completed <- 0
 
   for (iteration in seq_len(n_iterations)) {
-	  # SE
-	  for (gibbs_iteration in seq_len(n_gibbs_iterations)) {
-	    lbm <- gibbs_sample_cluster(
-		    lbm = lbm,
-		    dimension = "row"
-	    )
+    # SE
+    for (gibbs_iteration in seq_len(n_gibbs_iterations)) {
+      lbm <- gibbs_sample_cluster(
+        lbm = lbm,
+        dimension = "row"
+      )
 
-	    lbm <- gibbs_sample_cluster(
-		    lbm = lbm,
-		    dimension = "col"
-	    )
-	  }
+      lbm <- gibbs_sample_cluster(
+        lbm = lbm,
+        dimension = "col"
+      )
+    }
 
-	  # M
+    # M
     lbm$p <- list(
       row = tabulate(lbm$z$row, nbins = lbm$K$row) / lbm$N$row,
       col = tabulate(lbm$z$col, nbins = lbm$K$col) / lbm$N$col
@@ -301,11 +305,11 @@ sem_gibbs <- function(lbm, n_iterations, n_gibbs_iterations, eps, burn_in) {
 
     lbm$block_parameters <- estimate_block_parameters(lbm = lbm)
 
-	  parameter_history[[iteration]] <- list(
-	    p = lbm$p,
-	    block_parameters = lbm$block_parameters
-	  )
-	  n_iter_completed <- n_iter_completed + 1
+    parameter_history[[iteration]] <- list(
+      p = lbm$p,
+      block_parameters = lbm$block_parameters
+    )
+    n_iter_completed <- n_iter_completed + 1
 
     cur_log_likelihood <- log_likelihood(lbm)
     if (abs(cur_log_likelihood - prev_log_likelihood) < eps) {
@@ -315,9 +319,8 @@ sem_gibbs <- function(lbm, n_iterations, n_gibbs_iterations, eps, burn_in) {
   }
 
   if (burn_in < n_iter_completed) {
-	  parameter_history <- parameter_history[seq.int(burn_in + 1, n_iter_completed)]
-  }
-  else {
+    parameter_history <- parameter_history[seq.int(burn_in + 1, n_iter_completed)]
+  } else {
     parameter_history <- parameter_history[seq.int(n_iter_completed, n_iter_completed)]
   }
 
@@ -351,13 +354,15 @@ calculate_final_parameters <- function(lbm, parameter_history, n_iterations) {
   for (k in seq_len(K)) {
     for (l in seq_len(L)) {
       block_parameters[[k, l]] <- lapply(
-		    names(first_block_parameters[[k, l]]),
+        names(first_block_parameters[[k, l]]),
         function(name) {
           mean(vapply(
-            parameter_history, function(x) x$block_parameters[[k, l]][[name]], numeric(1)
+            parameter_history,
+            function(x) x$block_parameters[[k, l]][[name]],
+            numeric(1)
           ))
         }
-	    )
+      )
 
       names(block_parameters[[k, l]]) <- names(first_block_parameters[[k, l]])
     }
@@ -368,7 +373,7 @@ calculate_final_parameters <- function(lbm, parameter_history, n_iterations) {
 
   # Calculate the final cluster assignments based on the averaged parameters after burn-in
   for (iteration in seq_len(n_iterations)) {
-	  old_z <- lbm$z
+    old_z <- lbm$z
 
     lbm <- gibbs_sample_cluster(
       lbm = lbm,
