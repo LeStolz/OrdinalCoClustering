@@ -2,8 +2,8 @@
 % Please edit documentation in R/cocluster.R
 \name{cocluster}
 \alias{cocluster}
-\title{Co-cluster data by fitting a latent block model using a provided observation model
-and SEM-Gibbs estimation.}
+\title{Co-cluster data by fitting a Latent Block Model using a provided observation model,
+SEM-Gibbs estimation and model selection using ICL.}
 \usage{
 cocluster(
   x,
@@ -19,49 +19,46 @@ cocluster(
 )
 }
 \arguments{
-\item{x}{Matrix of ordinal observations. Missing values (\code{NA}) are natively supported.}
+\item{x}{Matrix of observations.}
 
 \item{K}{Initial number of row clusters.}
 
 \item{L}{Initial number of column clusters.}
 
-\item{model}{Observation model. This should be a list of functions defining the
-probability distribution of a block containing:
+\item{model}{Observation model as a list of functions defining the probability distribution of a block containing:
 \describe{
-\item{probability}{Function to compute the probability of given responses.}
-\item{log_probability}{Function to compute the log probability of given responses.}
-\item{estimate_parameters}{Function to estimate the parameters of the model.}
-\item{number_of_parameters}{The number of parameters in the model.}
+\item{probability}{Function to compute the probability of given responses under the obseration model.}
+\item{log_probability}{Function to compute the log probability of given responses under the obseration model.}
+\item{estimate_parameters}{Function to estimate the parameters of the observation model.}
+\item{number_of_parameters}{The number of parameters in the observation model.}
 }
-For ordinal data, use \code{cub(m)} where \code{m} is the maximum number of ordinal categories.}
+For ordinal data, use \code{cub(m)} where \code{m} is the number of ordinal categories.}
 
-\item{n_init}{Number of random initializations. Multiple initializations are
-strongly recommended to avoid local maxima.}
+\item{n_init}{Number of random initializations to avoid local maxima.}
 
 \item{n_iterations}{Number of iterations for the SEM-Gibbs algorithm.}
 
-\item{n_gibbs_iterations}{Number of Gibbs iterations for the SEM-Gibbs algorithm
-(typically performed within the E-step).}
+\item{n_gibbs_iterations}{Number of Gibbs iterations for the SEM-Gibbs algorithm in the E step.}
 
 \item{eps}{Convergence threshold for the SEM-Gibbs algorithm.}
 
 \item{burn_in}{Number of burn-in iterations for the SEM-Gibbs algorithm.
 Parameter estimates are averaged after this burn-in period.}
 
-\item{choose_n_clusters}{Logical. If \code{TRUE}, the function will greedily search (https://inria.hal.science/hal-01658589/document)
+\item{choose_n_clusters}{If \code{TRUE}, the function will greedily search (https://inria.hal.science/hal-01658589/document)
 the neighborhood of \verb{(K, L)} and select the optimal number of clusters based
 on the Integrated Completed Likelihood (ICL) criterion.}
 }
 \value{
 An object of class \code{cocluster} containing:
 \describe{
-\item{lbms}{List of all \verb{\link{lbm}} models evaluated.}
-\item{selected_lbm}{An object of class \verb{\link{lbm}} corresponding to the optimal model selected based on ICL.}
+\item{lbms}{List of all \code{\link{lbm}} models evaluated.}
+\item{selected_lbm}{An object of class \code{\link{lbm}} corresponding to the optimal model selected based on ICL.}
 }
 }
 \description{
-Co-cluster data by fitting a latent block model using a provided observation model
-and SEM-Gibbs estimation.
+Co-cluster data by fitting a Latent Block Model using a provided observation model,
+SEM-Gibbs estimation and model selection using ICL.
 }
 \examples{
 # 1. Create a small random ordinal matrix (20 rows, 10 columns, 1 to 5 scale)
@@ -75,6 +72,10 @@ result <- cocluster(
   K = 2,
   L = 2,
   model = cub(5),
+  n_init = 1,
+  n_iterations = 2,
+  n_gibbs_iterations = 1,
+  choose_n_clusters = FALSE
 )
 
 # 3. Inspect the optimal row and column assignments

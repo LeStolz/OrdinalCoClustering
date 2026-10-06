@@ -1,26 +1,24 @@
-#' Co-cluster data by fitting a latent block model using a provided observation model
-#' and SEM-Gibbs estimation.
+#' Co-cluster data by fitting a Latent Block Model using a provided observation model,
+#' SEM-Gibbs estimation and model selection using ICL.
 #'
-#' @param x Matrix of ordinal observations. Missing values (`NA`) are natively supported.
+#' @param x Matrix of observations.
 #' @param K Initial number of row clusters.
 #' @param L Initial number of column clusters.
-#' @param model Observation model. This should be a list of functions defining the
-#'   probability distribution of a block containing:
-#'   \describe{
-#'     \item{probability}{Function to compute the probability of given responses.}
-#'     \item{log_probability}{Function to compute the log probability of given responses.}
-#'     \item{estimate_parameters}{Function to estimate the parameters of the model.}
-#'     \item{number_of_parameters}{The number of parameters in the model.}
-#'   }
-#'   For ordinal data, use `cub(m)` where `m` is the maximum number of ordinal categories.
-#' @param n_init Number of random initializations. Multiple initializations are
-#'   strongly recommended to avoid local maxima.
+#' @param model Observation model as a list of functions defining the probability distribution of a block containing:
+#' \describe{
+#'   \item{probability}{Function to compute the probability of given responses under the obseration model.}
+#'   \item{log_probability}{Function to compute the log probability of given responses under the obseration model.}
+#'   \item{estimate_parameters}{Function to estimate the parameters of the observation model.}
+#'   \item{number_of_parameters}{The number of parameters in the observation model.}
+#' }
+#' For ordinal data, use `cub(m)` where `m` is the number of ordinal categories.
+#' @param n_init Number of random initializations to avoid local maxima.
 #' @param n_iterations Number of iterations for the SEM-Gibbs algorithm.
 #' @param n_gibbs_iterations Number of Gibbs iterations for the SEM-Gibbs algorithm in the E step.
 #' @param eps Convergence threshold for the SEM-Gibbs algorithm.
 #' @param burn_in Number of burn-in iterations for the SEM-Gibbs algorithm.
 #'   Parameter estimates are averaged after this burn-in period.
-#' @param choose_n_clusters Logical. If `TRUE`, the function will greedily search (https://inria.hal.science/hal-01658589/document)
+#' @param choose_n_clusters If `TRUE`, the function will greedily search (https://inria.hal.science/hal-01658589/document)
 #'   the neighborhood of `(K, L)` and select the optimal number of clusters based
 #'   on the Integrated Completed Likelihood (ICL) criterion.
 #'
@@ -42,6 +40,10 @@
 #'   K = 2,
 #'   L = 2,
 #'   model = cub(5),
+#'   n_init = 1,
+#'   n_iterations = 2,
+#'   n_gibbs_iterations = 1,
+#'   choose_n_clusters = FALSE
 #' )
 #'
 #' # 3. Inspect the optimal row and column assignments
@@ -108,8 +110,6 @@ cocluster <- function(x,
   lbms <- c(fit_result$lbms)
   selected_lbm <- fit_result$selected_lbm
 
-  #
-  #
   if (choose_n_clusters) {
     repeat {
       prev_selected_lbm <- selected_lbm
@@ -213,7 +213,7 @@ fit_models <- function(x,
 #' @param N Number of rows in the data matrix.
 #' @param D Number of columns in the data matrix.
 #'
-#' @return A list of integer vectors `c(K_new, L_new)` representing the valid neighboring cluster dimensions.
+#' @return A list of vectors `c(K_new, L_new)` representing the valid neighboring cluster dimensions.
 #' @noRd
 get_neighbors <- function(K, L, N, D) {
   neighbors <- list()

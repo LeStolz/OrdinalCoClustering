@@ -2,25 +2,16 @@
 % Please edit documentation in R/lbm.R
 \name{icl.lbm}
 \alias{icl.lbm}
-\title{Calculate the ICL}
+\title{Calculate the ICL of the Latent Block Model}
 \usage{
 \method{icl}{lbm}(lbm)
 }
 \arguments{
-\item{lbm}{An object of class \code{\link{lbm}} containing:
-\describe{
-\item{N}{A list containing the number of rows (\code{row}) and columns (\code{col}) of the data matrix.}
-\item{K}{A list containing the number of row clusters (\code{row}) and column clusters (\code{col}).}
-\item{x}{The data matrix.}
-\item{z}{A list containing the cluster assignments.}
-\item{p}{A list containing the prior probabilities of cluster membership.}
-\item{block_parameters}{Estimated observation model parameters of each block.}
-\item{model}{The observation model containing the \code{number_of_parameters} and the \code{log_probability} function.}
-}}
+\item{lbm}{An object of class \code{\link{lbm}}.}
 }
 \value{
 The ICL value.
 }
 \description{
-Calculate the ICL
+Calculate the ICL of the Latent Block Model
 }

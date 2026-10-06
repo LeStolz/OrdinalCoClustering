@@ -14,8 +14,3 @@ un oral au cours duquel je vous demanderai de m’expliquer certaines parties de
 
 # To test
 example, Gibbs, EM, CUB, SEM, LBM, Coclustering, ICL for selecting number of blocks, Random init, p$row, p$col, z$row, z$col, icl, block_parameters, best model.
-
-## References
-
-- ordinalClust package.
-- CUB package.
