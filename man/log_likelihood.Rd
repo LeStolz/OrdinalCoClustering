@@ -2,12 +2,12 @@
 % Please edit documentation in R/utils.R
 \name{log_likelihood}
 \alias{log_likelihood}
-\title{Calculate the complete log-likelihood}
+\title{Calculate the complete log-likelihood of a model.}
 \usage{
-log_likelihood(x, ...)
+log_likelihood(model, ...)
 }
 \arguments{
-\item{x}{A \code{model} object.}
+\item{model}{A \code{model} object.}
 
 \item{...}{Additional arguments.}
 }
@@ -15,5 +15,5 @@ log_likelihood(x, ...)
 The complete log-likelihood.
 }
 \description{
-Calculate the complete log-likelihood
+Calculate the complete log-likelihood of a model.
 }

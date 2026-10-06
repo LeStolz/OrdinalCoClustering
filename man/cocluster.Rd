@@ -2,17 +2,18 @@
 % Please edit documentation in R/cocluster.R
 \name{cocluster}
 \alias{cocluster}
-\title{Co-clustering}
+\title{Co-cluster data by fitting a latent block model using any observation model
+and SEM-Gibbs estimation.}
 \usage{
 cocluster(
   x,
   K,
   L,
-  model = cub_model,
+  model = cub,
   n_init = 20,
   n_iterations = 100,
   n_gibbs_iterations = 10,
-  eps = 0.001,
+  eps = 1e-09,
   burn_in = floor(n_iterations/2),
   choose_n_clusters = TRUE
 )
@@ -52,6 +53,6 @@ An object of class \code{cocluster} containing:
 }
 }
 \description{
-Fits a latent block model to data using any observation model
+Co-cluster data by fitting a latent block model using any observation model
 and SEM-Gibbs estimation.
 }
