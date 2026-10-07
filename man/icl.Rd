@@ -4,7 +4,7 @@
 \alias{icl}
 \title{Calculate the ICL of a model.}
 \usage{
-icl(model, ...)
+icl(model)
 }
 \arguments{
 \item{model}{An object of class \code{model} containing:
@@ -17,8 +17,6 @@ icl(model, ...)
 \item{block_parameters}{Estimated observation model parameters of each cluster.}
 \item{model}{The observation model containing the \code{number_of_parameters} and the \code{log_probability} function.}
 }}
-
-\item{...}{Additional arguments.}
 }
 \value{
 The ICL value.

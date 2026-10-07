@@ -21,9 +21,9 @@ cocluster(
 \arguments{
 \item{x}{Matrix of observations.}
 
-\item{K}{Initial number of row clusters.}
+\item{K}{Initial number of row clusters. If a vector is provided, a grid search is performed.}
 
-\item{L}{Initial number of column clusters.}
+\item{L}{Initial number of column clusters. If a vector is provided, a grid search is performed.}
 
 \item{model}{Observation model as a list of functions defining the probability distribution of a block containing:
 \describe{

@@ -4,10 +4,10 @@
 \alias{icl.lbm}
 \title{Calculate the ICL of the Latent Block Model}
 \usage{
-\method{icl}{lbm}(lbm)
+\method{icl}{lbm}(model)
 }
 \arguments{
-\item{lbm}{An object of class \code{\link{lbm}}.}
+\item{model}{An object of class \code{\link{lbm}}.}
 }
 \value{
 The ICL value.

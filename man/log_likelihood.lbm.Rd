@@ -4,10 +4,10 @@
 \alias{log_likelihood.lbm}
 \title{Calculate the complete log-likelihood of the Latent Block Model}
 \usage{
-\method{log_likelihood}{lbm}(lbm)
+\method{log_likelihood}{lbm}(model)
 }
 \arguments{
-\item{lbm}{An object of class \code{\link{lbm}}.}
+\item{model}{An object of class \code{\link{lbm}}.}
 }
 \value{
 The complete log-likelihood.

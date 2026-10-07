@@ -141,20 +141,20 @@ estimate_block_parameters <- function(lbm) {
 
 #' Calculate the complete log-likelihood of the Latent Block Model
 #'
-#' @param lbm An object of class \code{\link{lbm}}.
+#' @param model An object of class \code{\link{lbm}}.
 #'
 #' @return The complete log-likelihood.
 #' @export
-log_likelihood.lbm <- function(lbm) {
-  x <- lbm$x
-  z <- lbm$z
-  block_parameters <- lbm$block_parameters
-  model <- lbm$model
+log_likelihood.lbm <- function(model) {
+  x <- model$x
+  z <- model$z
+  block_parameters <- model$block_parameters
+  obs_model <- model$model
 
-  log_likelihood <- sum(log(lbm$p$row[z$row])) + sum(log(lbm$p$col[z$col]))
+  log_likelihood <- sum(log(model$p$row[z$row])) + sum(log(model$p$col[z$col]))
 
-  for (k in seq_len(lbm$K$row)) {
-    for (l in seq_len(lbm$K$col)) {
+  for (k in seq_len(model$K$row)) {
+    for (l in seq_len(model$K$col)) {
       row_indices <- which(z$row == k)
       col_indices <- which(z$col == l)
 
@@ -164,7 +164,7 @@ log_likelihood.lbm <- function(lbm) {
 
       block <- x[row_indices, col_indices, drop = FALSE]
 
-      block_log_p <- model$log_probability(block, block_parameters[[k, l]])
+      block_log_p <- obs_model$log_probability(block, block_parameters[[k, l]])
 
       log_likelihood <- log_likelihood + sum(block_log_p)
     }
@@ -176,18 +176,18 @@ log_likelihood.lbm <- function(lbm) {
 
 #' Calculate the ICL of the Latent Block Model
 #'
-#' @param lbm An object of class \code{\link{lbm}}.
+#' @param model An object of class \code{\link{lbm}}.
 #'
 #' @return The ICL value.
 #' @export
-icl.lbm <- function(lbm) {
-  N <- lbm$N$row
-  D <- lbm$N$col
-  K <- lbm$K$row
-  L <- lbm$K$col
-  v <- lbm$model$number_of_parameters
+icl.lbm <- function(model) {
+  N <- model$N$row
+  D <- model$N$col
+  K <- model$K$row
+  L <- model$K$col
+  v <- model$model$number_of_parameters
 
-  log_likelihood_value <- log_likelihood(lbm)
+  log_likelihood_value <- log_likelihood(model)
 
   penalty <- (
     (K - 1) * log(N) +

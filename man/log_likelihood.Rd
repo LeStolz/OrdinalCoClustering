@@ -4,7 +4,7 @@
 \alias{log_likelihood}
 \title{Calculate the complete log-likelihood of a model.}
 \usage{
-log_likelihood(model, ...)
+log_likelihood(model)
 }
 \arguments{
 \item{model}{An object of class \code{model} containing:
@@ -15,8 +15,6 @@ log_likelihood(model, ...)
 \item{block_parameters}{Estimated observation model parameters of each cluster.}
 \item{model}{The observation model containing the \code{log_probability} function.}
 }}
-
-\item{...}{Additional arguments.}
 }
 \value{
 The complete log-likelihood.

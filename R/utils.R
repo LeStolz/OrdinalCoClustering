@@ -8,11 +8,10 @@
 #'   \item{block_parameters}{Estimated observation model parameters of each cluster.}
 #'   \item{model}{The observation model containing the ``log_probability`` function.}
 #' }
-#' @param ... Additional arguments.
 #'
 #' @return The complete log-likelihood.
 #' @export
-log_likelihood <- function(model, ...) {
+log_likelihood <- function(model) {
   UseMethod("log_likelihood")
 }
 
@@ -29,10 +28,9 @@ log_likelihood <- function(model, ...) {
 #'   \item{block_parameters}{Estimated observation model parameters of each cluster.}
 #'   \item{model}{The observation model containing the ``number_of_parameters`` and the ``log_probability`` function.}
 #' }
-#' @param ... Additional arguments.
 #'
 #' @return The ICL value.
 #' @export
-icl <- function(model, ...) {
+icl <- function(model) {
   UseMethod("icl")
 }

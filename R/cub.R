@@ -12,7 +12,7 @@ cub_probability <- function(r, m, pi_, xi) {
   # m - 1 essais, avec une probabilité de succès 1 - xi : c'est la
   # binomiale décalée (partie "choix réfléchi").
   # (1 - pi_) / m : partie "hasard", loi uniforme sur 1..m.
-  pi_ * dbinom(r - 1, size = m - 1, prob = 1 - xi) + (1 - pi_) / m
+  pi_ * stats::dbinom(r - 1, size = m - 1, prob = 1 - xi) + (1 - pi_) / m
 }
 
 
@@ -50,7 +50,7 @@ e_zi__pi_xi <- function(r, m, pi_, xi) {
   # Règle de Bayes : tau_i = pi * b(r_i) / P(r_i)
   # = part du "choix réfléchi" dans la probabilité totale de la note r_i.
   # tau_i est l'espérance de la variable latente z_i (1 = choix réfléchi).
-  pi_ * dbinom(r - 1, size = m - 1, prob = 1 - xi) / cub_probability(r, m, pi_, xi)
+  pi_ * stats::dbinom(r - 1, size = m - 1, prob = 1 - xi) / cub_probability(r, m, pi_, xi)
 }
 
 
@@ -95,8 +95,8 @@ cub_em <- function(r, m, n_iterations = 200, eps = 1e-6,
     return(list(pi_ = 0.5, xi = 0.5))
   }
 
-  pi_ <- runif(1, 0.1, 0.9)
-  xi  <- runif(1, 0.1, 0.9)
+  pi_ <- stats::runif(1, 0.1, 0.9)
+  xi  <- stats::runif(1, 0.1, 0.9)
 
   for (iteration in seq_len(n_iterations)) {
     # étape E
